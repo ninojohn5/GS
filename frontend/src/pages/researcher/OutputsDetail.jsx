@@ -30,6 +30,7 @@ const EMPTY_FORM = {
   description: "",
   status: "Pending",
   target_date: "",
+  file: null,
 };
 
 const M = {
@@ -46,57 +47,175 @@ const M = {
 };
 
 function OutputModal({ initial = EMPTY_FORM, onClose, onSave, saving, error }) {
-  const [form, setForm] = useState(initial);
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const [form, setForm] = useState({
+    ...EMPTY_FORM,
+    ...initial,
+    file: null,
+  });
+
+  const fileInputRef = useRef(null);
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const isEdit = !!initial.id;
 
   return (
-    <div style={M.overlay} onClick={e => e.target === e.currentTarget && onClose()}>
+    <div
+      style={M.overlay}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
       <div style={M.modal}>
         <div style={M.header}>
           <h2 style={M.title}>{isEdit ? "Edit Output" : "Add Output"}</h2>
-          <button style={M.closeBtn} onClick={onClose}><X size={18} /></button>
+          <button style={M.closeBtn} onClick={onClose}>
+            <X size={18} />
+          </button>
         </div>
+
         <div style={M.body}>
           <div style={{ marginBottom: 14 }}>
             <label style={M.label}>Output Type *</label>
-            <select style={M.input} value={form.output_type}
-              onChange={e => set("output_type", e.target.value)}>
+            <select
+              style={M.input}
+              value={form.output_type}
+              onChange={(e) => set("output_type", e.target.value)}
+            >
               <option value="">— Select Output Type —</option>
-              {OUTPUT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              {OUTPUT_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </div>
+
           <div style={{ marginBottom: 14 }}>
             <label style={M.label}>Description *</label>
-            <textarea style={{ ...M.input, minHeight: 90, resize: "vertical" }}
+            <textarea
+              style={{ ...M.input, minHeight: 90, resize: "vertical" }}
               placeholder="Describe the expected output..."
               value={form.description}
-              onChange={e => set("description", e.target.value)} />
+              onChange={(e) => set("description", e.target.value)}
+            />
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+
+          <div style={{ marginBottom: 14 }}>
+            <label style={M.label}>
+              Upload Output File {!isEdit && "*"}
+            </label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                border: "1px solid #d1d5db",
+                borderRadius: 8,
+                padding: "8px 10px",
+                background: "#fff",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  border: "1px solid #e5e7eb",
+                  background: "#f9fafb",
+                  borderRadius: 7,
+                  padding: "7px 12px",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  color: "#374151",
+                }}
+              >
+                Choose File
+              </button>
+
+              <span
+                style={{
+                  fontSize: 13,
+                  color: form.file || form.file_name ? "#15803d" : "#9ca3af",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {form.file?.name ||
+                  form.file_name ||
+                  "No file chosen"}
+              </span>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.png,.jpg,.jpeg"
+                style={{ display: "none" }}
+                onChange={(e) => set("file", e.target.files[0] || null)}
+              />
+            </div>
+
+            <p style={{ margin: "6px 0 0", fontSize: 11, color: "#9ca3af" }}>
+              Accepted: PDF, Word, PowerPoint, Excel, PNG, JPG. Max 20MB.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 12,
+              marginBottom: 14,
+            }}
+          >
             <div>
               <label style={M.label}>Status</label>
-              <select style={M.input} value={form.status}
-                onChange={e => set("status", e.target.value)}>
+              <select
+                style={M.input}
+                value={form.status}
+                onChange={(e) => set("status", e.target.value)}
+              >
                 <option>Pending</option>
                 <option>In Progress</option>
                 <option>Completed</option>
               </select>
             </div>
+
             <div>
               <label style={M.label}>Target Date</label>
-              <input style={M.input} type="date" value={form.target_date || ""}
-                onChange={e => set("target_date", e.target.value)} />
+              <input
+                style={M.input}
+                type="date"
+                value={form.target_date || ""}
+                onChange={(e) => set("target_date", e.target.value)}
+              />
             </div>
           </div>
+
           {error && (
-            <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, padding: "10px 14px", marginBottom: 14, fontSize: 13, color: "#dc2626" }}>
+            <div
+              style={{
+                background: "#fef2f2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                padding: "10px 14px",
+                marginBottom: 14,
+                fontSize: 13,
+                color: "#dc2626",
+              }}
+            >
               {error}
             </div>
           )}
+
           <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <button style={M.cancelBtn} onClick={onClose}>Cancel</button>
-            <button style={M.saveBtn} onClick={() => onSave(form)} disabled={saving}>
+            <button style={M.cancelBtn} onClick={onClose}>
+              Cancel
+            </button>
+
+            <button
+              style={M.saveBtn}
+              onClick={() => onSave(form)}
+              disabled={saving}
+            >
               {saving ? "Saving…" : isEdit ? "Save Changes" : "Add Output"}
             </button>
           </div>
@@ -304,17 +423,57 @@ export default function OutputsDetail() {
 
   const handleSave = async (form) => {
     if (!form.output_type || !form.description) {
-      setSaveError("Output type and description are required."); return;
+      setSaveError("Output type and description are required.");
+      return;
     }
-    setSaving(true); setSaveError("");
+  
+    if (!form.id && !form.file) {
+      setSaveError("Please upload the output file.");
+      return;
+    }
+  
+    setSaving(true);
+    setSaveError("");
+  
     try {
-      if (form.id) await api.put(`/projects/${id}/outputs/${form.id}`, form);
-      else         await api.post(`/projects/${id}/outputs`, form);
-      setShowAdd(false); setEditing(null);
+      const formData = new FormData();
+  
+      formData.append("output_type", form.output_type);
+      formData.append("description", form.description);
+      formData.append("status", form.status || "Pending");
+  
+      if (form.target_date) {
+        formData.append("target_date", form.target_date);
+      }
+  
+      if (form.file) {
+        formData.append("file", form.file);
+      }
+  
+      if (form.id) {
+        formData.append("_method", "PUT");
+  
+        await api.post(`/projects/${id}/outputs/${form.id}`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } else {
+        await api.post(`/projects/${id}/outputs`, formData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      }
+  
+      setShowAdd(false);
+      setEditing(null);
       await fetchOutputs();
     } catch (err) {
-      setSaveError(err.response?.data?.message || "Failed to save output.");
-    } finally { setSaving(false); }
+      setSaveError(
+        err.response?.data?.message ||
+          err.response?.data?.errors?.file?.[0] ||
+          "Failed to save output."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -426,6 +585,25 @@ export default function OutputsDetail() {
                           </span>
                         </div>
                         <p style={{ margin: 0, fontSize: 13, color: "#6b7280" }}>{o.description}</p>
+                        {o.file_url && (
+                              <a
+                                href={o.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  marginTop: 6,
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  color: "#1d4ed8",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                View / Download File
+                              </a>
+                            )}
                         {o.target_date && (
                           <p style={{ margin: "4px 0 0", fontSize: 12, color: "#9ca3af" }}>
                             Target: {new Date(o.target_date).toLocaleDateString("en-PH", { year: "numeric", month: "short", day: "numeric" })}

@@ -32,6 +32,12 @@ const STATUS_STYLE = {
   "For Revision": { bg: "#fef3c7", color: "#d97706", border: "#fde68a" },
 };
 
+const OUTPUT_STATUS_STYLE = {
+  Pending: { bg: "#f3f4f6", color: "#6b7280", border: "#e5e7eb" },
+  "In Progress": { bg: "#d1fae5", color: "#065f46", border: "#a7f3d0" },
+  Completed: { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0" },
+};
+
 const PROJECT_STATUSES = [
   "Submitted",
   "Presentation Scheduled",
@@ -48,11 +54,11 @@ const PROJECT_STATUSES = [
 
 const fmtMoney = (v) => {
   const amount = Number(v || 0);
-  return amount ? `₱${amount.toLocaleString()}` : "—";
+  return amount ? `₱${amount.toLocaleString()}` : "-";
 };
 
 const fmtDate = (d) => {
-  if (!d) return "—";
+  if (!d) return "-";
 
   try {
     return new Date(d).toLocaleDateString("en-PH", {
@@ -65,15 +71,20 @@ const fmtDate = (d) => {
   }
 };
 
-const getReference = (p) => p?.reference_no || p?.project_id || p?.proposal_id || `PRJ-${p?.id}`;
-const getResearcherName = (p) => p?.creator?.name || p?.researcher || p?.created_by_name || "—";
+const getReference = (p) =>
+  p?.reference_no || p?.project_id || p?.proposal_id || `PRJ-${p?.id}`;
+
+const getResearcherName = (p) =>
+  p?.creator?.name || p?.researcher || p?.created_by_name || "-";
+
 const getDepartment = (p) =>
   p?.department_center?.name ||
   p?.departmentCenter?.name ||
   p?.department ||
   p?.creator?.department ||
-  "—";
-const getType = (p) => p?.type || p?.scholarly_work_type || "—";
+  "-";
+
+const getType = (p) => p?.type || p?.scholarly_work_type || "-";
 const getBudget = (p) => p?.budget || p?.total_budget || 0;
 
 function InfoRow({ icon, label, value }) {
@@ -104,7 +115,7 @@ function InfoRow({ icon, label, value }) {
           lineHeight: 1.4,
         }}
       >
-        {value || "—"}
+        {value || "-"}
       </p>
     </div>
   );
@@ -113,6 +124,30 @@ function InfoRow({ icon, label, value }) {
 function DetailModal({ project, onClose }) {
   const status = project?.status || "Submitted";
   const style = STATUS_STYLE[status] || STATUS_STYLE.Submitted;
+
+  const [outputs, setOutputs] = useState([]);
+  const [loadingOutputs, setLoadingOutputs] = useState(true);
+  const [outputsError, setOutputsError] = useState("");
+
+  useEffect(() => {
+    if (!project?.id) return;
+
+    setLoadingOutputs(true);
+    setOutputsError("");
+    setOutputs([]);
+
+    api
+      .get(`/projects/${project.id}/outputs`)
+      .then((res) => {
+        setOutputs(Array.isArray(res.data) ? res.data : []);
+      })
+      .catch((err) => {
+        console.error("Failed to load project outputs:", err);
+        setOutputs([]);
+        setOutputsError("Failed to load research outputs.");
+      })
+      .finally(() => setLoadingOutputs(false));
+  }, [project?.id]);
 
   return (
     <div
@@ -133,7 +168,7 @@ function DetailModal({ project, onClose }) {
           background: "#fff",
           borderRadius: 16,
           width: "100%",
-          maxWidth: 620,
+          maxWidth: 880,
           maxHeight: "90vh",
           overflow: "hidden",
           display: "flex",
@@ -268,7 +303,7 @@ function DetailModal({ project, onClose }) {
             </p>
           </div>
 
-          <div>
+          <div style={{ marginBottom: 22 }}>
             <p
               style={{
                 margin: "0 0 8px",
@@ -293,11 +328,253 @@ function DetailModal({ project, onClose }) {
               {project?.description || project?.abstract || "No description available."}
             </p>
           </div>
+
+          <div
+            style={{
+              border: "1px solid #e5e7eb",
+              borderRadius: 12,
+              overflow: "hidden",
+              background: "#fff",
+            }}
+          >
+            <div
+              style={{
+                padding: "14px 16px",
+                borderBottom: "1px solid #f1f5f9",
+                background: "#f9fafb",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: "#111827",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                  }}
+                >
+                  <FileText size={15} color="#f59e0b" />
+                  Research Outputs
+                </p>
+
+                <p
+                  style={{
+                    margin: "3px 0 0",
+                    fontSize: 12,
+                    color: "#9ca3af",
+                  }}
+                >
+                  Uploaded project outputs and attached files
+                </p>
+              </div>
+
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#6b7280",
+                  background: "#fff",
+                  border: "1px solid #e5e7eb",
+                  padding: "4px 10px",
+                  borderRadius: 999,
+                }}
+              >
+                {outputs.length} file record{outputs.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {loadingOutputs && (
+              <p
+                style={{
+                  margin: 0,
+                  padding: 18,
+                  fontSize: 13,
+                  color: "#9ca3af",
+                }}
+              >
+                Loading outputs...
+              </p>
+            )}
+
+            {!loadingOutputs && outputsError && (
+              <p
+                style={{
+                  margin: 0,
+                  padding: 18,
+                  fontSize: 13,
+                  color: "#dc2626",
+                }}
+              >
+                {outputsError}
+              </p>
+            )}
+
+            {!loadingOutputs && !outputsError && outputs.length === 0 && (
+              <p
+                style={{
+                  margin: 0,
+                  padding: 18,
+                  fontSize: 13,
+                  color: "#9ca3af",
+                }}
+              >
+                No research outputs uploaded yet.
+              </p>
+            )}
+
+            {!loadingOutputs && !outputsError && outputs.length > 0 && (
+              <div style={{ overflowX: "auto" }}>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                  }}
+                >
+                  <thead>
+                    <tr style={{ background: "#fff", borderBottom: "1px solid #e5e7eb" }}>
+                      <th style={TH}>Output Type</th>
+                      <th style={TH}>Description</th>
+                      <th style={{ ...TH, textAlign: "center" }}>Status</th>
+                      <th style={{ ...TH, textAlign: "center" }}>Target Date</th>
+                      <th style={TH}>Uploaded File</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {outputs.map((output) => {
+                      const outputStatus = output.status || "Pending";
+                      const outputStyle =
+                        OUTPUT_STATUS_STYLE[outputStatus] ||
+                        OUTPUT_STATUS_STYLE.Pending;
+
+                      return (
+                        <tr key={output.id} style={{ borderBottom: "1px solid #f3f4f6" }}>
+                          <td
+                            style={{
+                              padding: "11px 12px",
+                              color: "#111827",
+                              fontWeight: 700,
+                              verticalAlign: "top",
+                              minWidth: 130,
+                            }}
+                          >
+                            {output.output_type || "-"}
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "11px 12px",
+                              color: "#374151",
+                              lineHeight: 1.45,
+                              verticalAlign: "top",
+                              minWidth: 220,
+                            }}
+                          >
+                            {output.description || "-"}
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "11px 12px",
+                              textAlign: "center",
+                              verticalAlign: "top",
+                              minWidth: 110,
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                padding: "3px 10px",
+                                borderRadius: 999,
+                                background: outputStyle.bg,
+                                color: outputStyle.color,
+                                border: `1px solid ${outputStyle.border}`,
+                                fontSize: 12,
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {outputStatus}
+                            </span>
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "11px 12px",
+                              color: "#374151",
+                              textAlign: "center",
+                              verticalAlign: "top",
+                              minWidth: 115,
+                            }}
+                          >
+                            {fmtDate(output.target_date)}
+                          </td>
+
+                          <td
+                            style={{
+                              padding: "11px 12px",
+                              verticalAlign: "top",
+                              minWidth: 160,
+                            }}
+                          >
+                            {output.file_url ? (
+                              <a
+                                href={output.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  color: "#1d4ed8",
+                                  fontWeight: 700,
+                                  textDecoration: "none",
+                                  lineHeight: 1.35,
+                                }}
+                              >
+                                <Eye size={13} />
+                                {output.file_name
+                                  ? output.file_name.length > 28
+                                    ? `${output.file_name.slice(0, 28)}...`
+                                    : output.file_name
+                                  : "View file"}
+                              </a>
+                            ) : (
+                              <span style={{ color: "#9ca3af" }}>No file</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+const TH = {
+  padding: "10px 12px",
+  textAlign: "left",
+  fontSize: 11,
+  fontWeight: 800,
+  color: "#6b7280",
+  textTransform: "uppercase",
+  letterSpacing: "0.04em",
+  whiteSpace: "nowrap",
+};
 
 function DeleteConfirmModal({ project, onClose, onConfirm, deleting }) {
   return (
@@ -775,7 +1052,7 @@ export default function AdminProjects() {
                     color: "#111827",
                   }}
                 >
-                  {loading ? "—" : projects.length}
+                  {loading ? "-" : projects.length}
                 </p>
               </div>
 
@@ -799,7 +1076,7 @@ export default function AdminProjects() {
                     color: "#0369a1",
                   }}
                 >
-                  {loading ? "—" : submittedCount}
+                  {loading ? "-" : submittedCount}
                 </p>
               </div>
 
@@ -823,7 +1100,7 @@ export default function AdminProjects() {
                     color: "#15803d",
                   }}
                 >
-                  {loading ? "—" : approvedCount}
+                  {loading ? "-" : approvedCount}
                 </p>
               </div>
 
@@ -847,7 +1124,7 @@ export default function AdminProjects() {
                     color: "#111827",
                   }}
                 >
-                  {loading ? "—" : fmtMoney(totalBudget)}
+                  {loading ? "-" : fmtMoney(totalBudget)}
                 </p>
               </div>
             </div>
@@ -869,8 +1146,8 @@ export default function AdminProjects() {
                   onChange={(e) => setStatusFilter(e.target.value)}
                 >
                   <option>All Status</option>
-                  {PROJECT_STATUSES.map((status) => (
-                    <option key={status}>{status}</option>
+                  {PROJECT_STATUSES.map((projectStatus) => (
+                    <option key={projectStatus}>{projectStatus}</option>
                   ))}
                 </select>
                 <ChevronDown size={15} color="#6b7280" />
@@ -939,8 +1216,9 @@ export default function AdminProjects() {
 
                     {!loading &&
                       filtered.map((project) => {
-                        const status = project.status || "Submitted";
-                        const style = STATUS_STYLE[status] || STATUS_STYLE.Submitted;
+                        const projectStatus = project.status || "Submitted";
+                        const projectStyle =
+                          STATUS_STYLE[projectStatus] || STATUS_STYLE.Submitted;
 
                         return (
                           <tr key={project.id}>
@@ -964,15 +1242,15 @@ export default function AdminProjects() {
                                   alignItems: "center",
                                   padding: "4px 11px",
                                   borderRadius: 999,
-                                  background: style.bg,
-                                  color: style.color,
-                                  border: `1px solid ${style.border}`,
+                                  background: projectStyle.bg,
+                                  color: projectStyle.color,
+                                  border: `1px solid ${projectStyle.border}`,
                                   fontSize: 12,
                                   fontWeight: 700,
                                   whiteSpace: "nowrap",
                                 }}
                               >
-                                {status}
+                                {projectStatus}
                               </span>
                             </td>
 

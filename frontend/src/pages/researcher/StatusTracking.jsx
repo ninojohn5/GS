@@ -24,6 +24,8 @@ const STATUS_BADGE_STYLES = {
   Forwarded: { bg: "#e0f2fe", color: "#0369a1" },
   Rejected: { bg: "#fef2f2", color: "#dc2626" },
   "For Revision": { bg: "#fef3c7", color: "#d97706" },
+  Pending: { bg: "#f3f4f6", color: "#6b7280" },
+  Completed: { bg: "#dcfce7", color: "#15803d" },
 };
 
 const fmtDate = (d) => {
@@ -99,7 +101,7 @@ function TimelineIcon({ status, color }) {
   );
 }
 
-function handlePrintApproved(project, history, approvals, proposal) {
+function handlePrintApproved(project, history, approvals, proposal, outputs = []) {
   const today = new Date().toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
@@ -223,6 +225,26 @@ function handlePrintApproved(project, history, approvals, proposal) {
           })
           .join("")
       : `<tr><td colspan="9" class="muted italic">No evaluator records found.</td></tr>`;
+
+  const outputRows =
+    outputs.length > 0
+      ? outputs
+          .map(
+            (o, index) => `
+              <tr>
+                <td class="center">${index + 1}</td>
+                <td class="strong">${o.output_type || "—"}</td>
+                <td>${o.description || "—"}</td>
+                <td class="center">
+                  <span class="status-pill">${o.status || "Pending"}</span>
+                </td>
+                <td class="center">${o.target_date ? fmtDate(o.target_date) : "—"}</td>
+                <td>${o.file_name || "No uploaded file"}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : `<tr><td colspan="6" class="muted italic">No research outputs uploaded yet.</td></tr>`;
 
   const approvalSteps = [
     { status: "Endorsed", role: "RDE Division Chief", action: "Endorsed" },
@@ -663,6 +685,29 @@ function handlePrintApproved(project, history, approvals, proposal) {
         </table>
       </div>
 
+      <div class="section">
+        <div class="section-title">VI. Research Outputs</div>
+
+        <table>
+          <thead>
+            <tr>
+              <th class="center">#</th>
+              <th>Output Type</th>
+              <th>Description</th>
+              <th class="center">Status</th>
+              <th class="center">Target Date</th>
+              <th>Uploaded File</th>
+            </tr>
+          </thead>
+
+          <tbody>${outputRows}</tbody>
+        </table>
+
+        <p class="small-muted" style="margin-top:8px;">
+          Note: Uploaded files are stored separately in the system. This report only lists the attached output file names.
+        </p>
+      </div>
+
       <div class="sig-grid">
         <div class="sig-block">
           ${
@@ -709,6 +754,7 @@ export default function StatusTracking() {
   const [projects, setProjects] = useState([]);
   const [selectedId, setSelectedId] = useState("");
   const [trackingData, setTrackingData] = useState(null);
+  const [outputs, setOutputs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
 
@@ -727,13 +773,20 @@ export default function StatusTracking() {
     if (!selectedId) return;
 
     setLoading(true);
+    setOutputs([]);
 
-    api
-      .get(`/projects/${selectedId}/status-history`)
-      .then((res) => setTrackingData(res.data))
+    Promise.all([
+      api.get(`/projects/${selectedId}/status-history`),
+      api.get(`/projects/${selectedId}/outputs`),
+    ])
+      .then(([statusRes, outputsRes]) => {
+        setTrackingData(statusRes.data);
+        setOutputs(Array.isArray(outputsRes.data) ? outputsRes.data : []);
+      })
       .catch((err) => {
-        console.error("Failed to load status history", err);
+        console.error("Failed to load status tracking data", err);
         setTrackingData(null);
+        setOutputs([]);
       })
       .finally(() => setLoading(false));
   }, [selectedId]);
@@ -766,10 +819,10 @@ export default function StatusTracking() {
           null,
       };
 
-      handlePrintApproved(printableProject, history, approvals, proposal);
+      handlePrintApproved(printableProject, history, approvals, proposal, outputs);
     } catch (e) {
       console.error("Failed to fetch printable data", e);
-      handlePrintApproved(project, history, [], {});
+      handlePrintApproved(project, history, [], {}, outputs);
     } finally {
       setTimeout(() => setGenerating(false), 1000);
     }
@@ -900,6 +953,183 @@ export default function StatusTracking() {
                   </p>
                 </div>
               </div>
+            </div>
+          )}
+
+          {project && (
+            <div className="cp-section" style={{ marginBottom: 16 }}>
+              <div className="cp-section-title">Research Outputs</div>
+
+              {loading && (
+                <p style={{ color: "#9ca3af", fontSize: 14 }}>Loading outputs...</p>
+              )}
+
+              {!loading && outputs.length === 0 && (
+                <p style={{ color: "#9ca3af", fontSize: 14, margin: 0 }}>
+                  No research outputs uploaded yet.
+                </p>
+              )}
+
+              {!loading && outputs.length > 0 && (
+                <div style={{ overflowX: "auto" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: 13,
+                    }}
+                  >
+                    <thead>
+                      <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "10px 8px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Output Type
+                        </th>
+
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "10px 8px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Description
+                        </th>
+
+                        <th
+                          style={{
+                            textAlign: "center",
+                            padding: "10px 8px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Status
+                        </th>
+
+                        <th
+                          style={{
+                            textAlign: "center",
+                            padding: "10px 8px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Target Date
+                        </th>
+
+                        <th
+                          style={{
+                            textAlign: "left",
+                            padding: "10px 8px",
+                            color: "#6b7280",
+                            fontWeight: 700,
+                          }}
+                        >
+                          Uploaded File
+                        </th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {outputs.map((o) => {
+                        const outputStatusStyle =
+                          STATUS_BADGE_STYLES[o.status] ||
+                          STATUS_BADGE_STYLES.Pending;
+
+                        return (
+                          <tr
+                            key={o.id}
+                            style={{ borderBottom: "1px solid #f3f4f6" }}
+                          >
+                            <td
+                              style={{
+                                padding: "10px 8px",
+                                fontWeight: 700,
+                                color: "#111827",
+                                verticalAlign: "top",
+                              }}
+                            >
+                              {o.output_type || "—"}
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "10px 8px",
+                                color: "#374151",
+                                verticalAlign: "top",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {o.description || "—"}
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "10px 8px",
+                                textAlign: "center",
+                                verticalAlign: "top",
+                              }}
+                            >
+                              <span
+                                className="badge"
+                                style={{
+                                  background: outputStatusStyle.bg,
+                                  color: outputStatusStyle.color,
+                                }}
+                              >
+                                {o.status || "Pending"}
+                              </span>
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "10px 8px",
+                                textAlign: "center",
+                                color: "#374151",
+                                verticalAlign: "top",
+                              }}
+                            >
+                              {o.target_date ? fmtDate(o.target_date) : "—"}
+                            </td>
+
+                            <td
+                              style={{
+                                padding: "10px 8px",
+                                verticalAlign: "top",
+                              }}
+                            >
+                              {o.file_url ? (
+                                <a
+                                  href={o.file_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  style={{
+                                    color: "#1d4ed8",
+                                    fontWeight: 700,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  {o.file_name || "View file"}
+                                </a>
+                              ) : (
+                                <span style={{ color: "#9ca3af" }}>No file</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           )}
 

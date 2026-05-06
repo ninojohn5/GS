@@ -15,8 +15,12 @@ class Output extends Model
         'description',
         'status',
         'target_date',
+        'file_path',
+        'file_name',
+        'file_type',
     ];
 
+    
     protected $casts = [
         'target_date' => 'date',
     ];
