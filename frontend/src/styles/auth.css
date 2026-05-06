@@ -1,0 +1,287 @@
+/* ===== LAYOUT ===== */
+.split-container {
+  display: grid;
+  grid-template-columns: 8fr 4fr;
+  height: 100vh;
+}
+
+/* LEFT */
+.left-panel {
+  background: url("/src/assets/school.png") no-repeat center center;
+  background-size: cover;
+  position: relative;
+}
+
+.left-panel::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* RIGHT */
+.right-panel {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 50px 60px;
+  background: linear-gradient(to bottom right, #f7f9fb, #eef2f6);
+  border-left: 1px solid #e5e7eb;
+}
+
+/* FORM */
+.form-container {
+  width: 100%;
+  max-width: 420px;
+  padding: 40px 35px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+/* HEADER */
+.form-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.form-header h1 {
+  font-size: 20px;
+  margin: 0;
+}
+
+.form-header p {
+  font-size: 12px;
+  color: #888;
+}
+
+/* TITLES */
+h2 {
+  text-align: center;
+  margin-bottom: 5px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 900px) {
+  .split-container {
+    grid-template-columns: 1fr;
+  }
+
+  .left-panel {
+    height: 250px;
+  }
+
+  .form-container {
+    width: 90%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   AUTH PAGE
+═══════════════════════════════════════════════════════ */
+
+/* ── Background ── */
+.auth-bg {
+  min-height: 100vh;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ── Card ── */
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  background: white;
+}
+
+/* ── Green Header ── */
+.card-header {
+  background: linear-gradient(135deg, #3aaf5c 0%, #1a6b1a 100%);
+  padding: 32px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.school-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.school-name {
+  color: white;
+  font-size: 1.9rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.school-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+.divider-line {
+  display: inline-block;
+  width: 48px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.school-sub {
+  font-size: 0.72rem;
+  letter-spacing: 2.5px;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 600;
+}
+
+/* ── Form Body ── */
+.card-body {
+  padding: 28px 32px 32px;
+}
+
+.card-body h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  text-align: center;
+  margin: 0 0 4px;
+}
+
+.subtitle {
+  color: #6b7280;
+  text-align: center;
+  font-size: 0.88rem;
+  margin: 0 0 20px;
+}
+
+/* ── Form Group ── */
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 5px;
+}
+
+/* ── Plain inputs ── */
+.form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.93rem;
+  outline: none;
+  box-sizing: border-box;
+  background: white;
+  color: #111827;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus {
+  border-color: var(--main-color, #1f7a1f);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--main-color, #1f7a1f) 15%, transparent);
+}
+
+/* ── Error box ── */
+.auth-error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* ── Primary button — background set inline per role ── */
+.primary-btn {
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+  box-sizing: border-box;
+  transition: filter 0.15s, opacity 0.15s;
+}
+
+.primary-btn:hover:not(:disabled) {
+  filter: brightness(0.88);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Auth link — color set inline per role ── */
+.auth-link {
+  text-align: center;
+  margin-top: 16px;
+  font-size: 0.88rem;
+  color: #6b7280;
+}
+
+.auth-link span {
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.auth-link span:hover {
+  opacity: 0.75;
+}
+
+/* ── Password show/hide toggle ── */
+.pw-wrap {
+  position: relative;
+}
+
+.pw-wrap input {
+  padding-right: 42px !important;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  color: #9ca3af;
+  transition: color 0.15s;
+}
+
+.pw-toggle:hover {
+  color: #6b7280;
+}

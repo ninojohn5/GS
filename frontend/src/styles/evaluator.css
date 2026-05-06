@@ -1,0 +1,326 @@
+/* ══════════════════════════════════════════════════════
+   EVALUATOR SIDEBAR
+══════════════════════════════════════════════════════ */
+.ev-sidebar {
+  width: 250px;
+  background: white;
+  border-right: 1px solid #eee;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.ev-sidebar.collapsed { width: 80px; }
+
+/* Header */
+.ev-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #f1f1f1;
+  margin-bottom: 20px;
+}
+
+.ev-sidebar.collapsed .ev-sidebar-header { justify-content: center; }
+.ev-sidebar.collapsed .header-text        { display: none; }
+
+/* Menu */
+.ev-sidebar-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+}
+
+.ev-sidebar-menu li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  transition: 0.25s;
+  font-size: 14px;
+  color: #374151;
+}
+
+.ev-sidebar-menu li:hover  { background: #f5f3ff; }
+
+.ev-sidebar-menu li.active {
+  background: #391676;
+  color: white;
+}
+
+.ev-sidebar.collapsed .ev-sidebar-menu li       { justify-content: center; }
+.ev-sidebar.collapsed .ev-sidebar-menu li span  { display: none; }
+
+/* User bottom */
+.ev-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 4px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 12px;
+}
+
+.ev-sidebar-user strong { font-size: 0.88rem; display: block; color: #111827; }
+.ev-sidebar-user small  { font-size: 0.75rem; color: #6b7280; }
+
+.ev-avatar-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Toggle footer */
+.ev-sidebar-footer { margin-top: 8px; }
+
+.ev-sidebar-footer button {
+  width: 100%;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: #f3f4f6;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.ev-sidebar-footer button:hover { background: #e5e7eb; }
+.ev-sidebar.collapsed .ev-sidebar-footer button { width: 40px; margin: auto; }
+
+
+/* ══════════════════════════════════════════════════════
+   EVALUATOR CARD OVERRIDES
+══════════════════════════════════════════════════════ */
+.ev-card-accent { border-left: 4px solid #7c3aed; }
+
+.ev-card-link {
+  font-size: 0.82rem;
+  color: #7c3aed;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-block;
+  margin-top: 6px;
+}
+
+.ev-card-link:hover { text-decoration: underline; }
+
+
+/* ══════════════════════════════════════════════════════
+   EVALUATIONS PAGE — SPLIT LAYOUT
+══════════════════════════════════════════════════════ */
+.ev-split {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+}
+
+.ev-pending-panel,
+.ev-form-panel {
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ev-panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 16px;
+}
+
+/* Pending card */
+.ev-pending-card {
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.ev-pending-card:hover   { border-color: #c4b5fd; background: #faf5ff; }
+.ev-pending-card.selected { border-color: #7c3aed; background: #f5f3ff; }
+
+.ev-pending-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 3px;
+  line-height: 1.4;
+}
+
+.ev-pending-id {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+/* Empty state */
+.ev-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  gap: 12px;
+}
+
+/* Range slider */
+.ev-slider {
+  width: 100%;
+  accent-color: #7c3aed;
+  cursor: pointer;
+}
+
+/* Progress bar */
+.ev-progress-bg {
+  width: 100%;
+  height: 6px;
+  background: #f3f4f6;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.ev-progress-bar {
+  height: 100%;
+  background: #7c3aed;
+  border-radius: 99px;
+  transition: width 0.2s ease;
+}
+
+/* Total score box */
+.ev-total-score {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f5f3ff;
+  border: 1px solid #ede9fe;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+/* Credentials box */
+.ev-credentials {
+  background: #faf5ff;
+  border: 1px solid #ede9fe;
+  border-radius: 10px;
+  padding: 18px;
+  margin-bottom: 4px;
+}
+
+
+/* ══════════════════════════════════════════════════════
+   SIGNATURE — TABS
+══════════════════════════════════════════════════════ */
+.ev-sig-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 10px;
+  width: fit-content;
+}
+
+.ev-sig-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: #6b7280;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ev-sig-tab:hover { color: #374151; }
+
+.ev-sig-tab.active {
+  background: white;
+  color: #7c3aed;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* Canvas draw area */
+.ev-canvas-wrapper {
+  border: 1.5px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: white;
+}
+
+.ev-sig-canvas {
+  display: block;
+  width: 100%;
+  height: 130px;
+  cursor: crosshair;
+  touch-action: none;
+  background: #fafafa;
+}
+
+.ev-canvas-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: #f9fafb;
+  border-top: 1px solid #f0f0f0;
+}
+
+.ev-clear-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: #dc2626;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 3px 8px;
+  border-radius: 5px;
+  transition: background 0.15s;
+}
+
+.ev-clear-btn:hover { background: #fef2f2; }
+
+/* Upload area */
+.ev-sig-upload { padding: 4px 0 0; }
+
+/* Submit button */
+.ev-submit-btn {
+  padding: 10px 22px;
+  background: #7c3aed;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: filter 0.2s;
+}
+
+.ev-submit-btn:hover    { filter: brightness(1.1); }
+.ev-submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }

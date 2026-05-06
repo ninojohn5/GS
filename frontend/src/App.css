@@ -1,0 +1,43 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #f7f7f7;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 30px;
+  background: white;
+  border-bottom: 1px solid #ddd;
+}
+
+.container {
+  padding: 40px;
+}
+
+.primary-btn {
+  background: #c88a00;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+}
+
+.form-card {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+}
+
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 10px;
+}
