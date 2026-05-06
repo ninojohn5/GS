@@ -15,6 +15,9 @@ frontend/.env
 frontend/.env.local
 frontend/.env.production
 
+# Root node_modules
+node_modules/
+
 # System/editor files
 .DS_Store
 Thumbs.db
