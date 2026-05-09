@@ -33,17 +33,27 @@ Route::post('/login',    [AuthController::class, 'login']);
 */
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::get('/personnel/search', function (Request $request) {
-        $q = $request->query('q');
+Route::get('/personnel/search', function (Request $request) {
+    $q = $request->query('q');
 
-        return \App\Models\Personnel::where('role', 'researcher')
-            ->where(function ($query) use ($q) {
-                $query->where('name', 'like', "%{$q}%")
-                    ->orWhere('email', 'like', "%{$q}%");
-            })
-            ->where('is_active', true)
-            ->get(['id', 'name', 'email', 'role']);
-    });
+    return \App\Models\Personnel::where('role', 'researcher')
+        ->where(function ($query) use ($q) {
+            $query->where('name', 'like', "%{$q}%")
+                ->orWhere('email', 'like', "%{$q}%");
+        })
+        ->where('is_active', true)
+        ->get([
+            'id',
+            'name',
+            'email',
+            'role',
+            'department',
+            'program',
+            'position',
+            'college_id',
+            'department_center_id',
+        ]);
+});
 
     /*
     |--------------------------------------------------------------------------

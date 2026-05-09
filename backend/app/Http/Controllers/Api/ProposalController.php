@@ -49,6 +49,9 @@ class ProposalController extends Controller
 
         $data = $request->validate([
             'scholarly_work_type'     => 'required|in:Research,Extension,Instructional Material Development',
+            'category'                => 'nullable|string|max:255',
+            'lead_agency'             => 'nullable|string|max:255',
+            'site_area'               => 'nullable|string|max:255',
             'is_first_time'           => 'nullable',
             'has_external_collab'     => 'nullable',
             'external_collab_details' => 'nullable|string',
@@ -58,10 +61,24 @@ class ProposalController extends Controller
             'difference_explanation'  => 'nullable|string',
         ]);
 
+        $projectData = [
+            'type'                => $data['scholarly_work_type'],
+            'scholarly_work_type' => $data['scholarly_work_type'],
+            'category'            => $data['category'] ?? null,
+            'lead_agency'         => $data['lead_agency'] ?? null,
+            'site_area'           => $data['site_area'] ?? null,
+        ];
+
+        $this->fillExistingColumns($project, 'research_projects', $projectData);
+        $project->save();
+
         $proposal = Proposal::updateOrCreate(
             ['research_project_id' => $project->id],
             [
                 'scholarly_work_type'     => $data['scholarly_work_type'],
+                'category'                => $data['category'] ?? null,
+                'lead_agency'             => $data['lead_agency'] ?? null,
+                'site_area'               => $data['site_area'] ?? null,
                 'is_first_time'           => $this->toBool($data['is_first_time'] ?? false),
                 'has_external_collab'     => $this->toBool($data['has_external_collab'] ?? false),
                 'external_collab_details' => $data['external_collab_details'] ?? null,
@@ -97,6 +114,7 @@ class ProposalController extends Controller
                 'name'                => $proponent->personnel?->name,
                 'email'               => $proponent->personnel?->email,
                 'department'          => $proponent->personnel?->department,
+                'program'             => $proponent->personnel?->program,
                 'position'            => $proponent->personnel?->position,
                 'role'                => $proponent->role,
                 'cv_path'             => $proponent->cv_path,
@@ -116,6 +134,12 @@ class ProposalController extends Controller
         $data = $request->validate([
             'title'                    => 'required|string|max:255',
             'scholarly_work_type'      => 'required|in:Research,Extension,Instructional Material Development',
+
+            // Added fields for Project View
+            'category'                 => 'nullable|string|max:255',
+            'lead_agency'              => 'nullable|string|max:255',
+            'site_area'                => 'nullable|string|max:255',
+
             'total_budget'             => 'nullable|numeric',
             'start_date'               => 'nullable|date',
             'end_date'                 => 'nullable|date',
@@ -183,6 +207,12 @@ class ProposalController extends Controller
                 'title'               => $data['title'],
                 'type'                => $data['scholarly_work_type'],
                 'scholarly_work_type' => $data['scholarly_work_type'],
+
+                // Added fields for Project View
+                'category'            => $data['category'] ?? null,
+                'lead_agency'         => $data['lead_agency'] ?? null,
+                'site_area'           => $data['site_area'] ?? null,
+
                 'budget'              => $data['total_budget'] ?? 0,
                 'total_budget'        => $data['total_budget'] ?? 0,
                 'start_date'          => $data['start_date'] ?? null,
@@ -216,8 +246,8 @@ class ProposalController extends Controller
             }
 
             if (!empty($cvPaths)) {
-                $projectData['cv_files'] = $cvPaths;
-                $projectData['cv_paths'] = $cvPaths;
+                $projectData['cv_files'] = json_encode($cvPaths);
+                $projectData['cv_paths'] = json_encode($cvPaths);
             }
 
             if (!empty($decodedSignatures)) {
@@ -240,6 +270,12 @@ class ProposalController extends Controller
 
             $proposalData = [
                 'scholarly_work_type'      => $data['scholarly_work_type'],
+
+                // Added fields, only saved if proposals table has these columns
+                'category'                 => $data['category'] ?? null,
+                'lead_agency'              => $data['lead_agency'] ?? null,
+                'site_area'                => $data['site_area'] ?? null,
+
                 'is_first_time'            => $this->toBool($data['is_first_time'] ?? true),
                 'has_external_collab'      => $this->toBool($data['has_external_collab'] ?? false),
                 'external_collab_details'  => $data['external_collab_details'] ?? null,
@@ -282,8 +318,8 @@ class ProposalController extends Controller
             }
 
             if (!empty($cvPaths)) {
-                $projectData['cv_files'] = $cvPaths;
-                $projectData['cv_paths'] = $cvPaths;
+                $proposalData['cv_files'] = json_encode($cvPaths);
+                $proposalData['cv_paths'] = json_encode($cvPaths);
             }
 
             $this->fillExistingColumns($proposal, 'proposals', $proposalData);
@@ -436,16 +472,16 @@ class ProposalController extends Controller
     {
         $year = now()->format('Y');
         $nextNumber = ResearchProject::whereYear('created_at', $year)->count() + 1;
-    
+
         do {
             $referenceNo = 'PRJ-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
             $exists = ResearchProject::where('reference_no', $referenceNo)->exists();
-    
+
             if ($exists) {
                 $nextNumber++;
             }
         } while ($exists);
-    
+
         return $referenceNo;
     }
 }

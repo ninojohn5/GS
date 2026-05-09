@@ -63,6 +63,9 @@ const getRoleStyle = (role) =>
 const EMPTY_FORM = {
   title: "",
   scholarly_work_type: "Research",
+  category: "",
+  lead_agency: "",
+  site_area: "",
   total_budget: "",
   start_date: "",
   end_date: "",
@@ -181,41 +184,83 @@ function FieldLabel({ label }) {
   );
 }
 
+function DetailChip({ label, value }) {
+  if (!value) return null;
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 6,
+        padding: "5px 9px",
+        borderRadius: 999,
+        background: "#f8fafc",
+        border: "1px solid #e2e8f0",
+        fontSize: 12,
+        color: "#334155",
+        lineHeight: 1,
+        maxWidth: "100%",
+      }}
+    >
+      <span
+        style={{
+          fontSize: 10,
+          fontWeight: 800,
+          color: "#64748b",
+          textTransform: "uppercase",
+          letterSpacing: "0.04em",
+        }}
+      >
+        {label}
+      </span>
+
+      <span
+        style={{
+          fontWeight: 600,
+          color: "#0f172a",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
 function ProponentDetails({ department, program, position }) {
-  const rows = [
-    { label: "", value: department },
-    { label: "", value: program },
-    { label: "Position", value: position },
-  ];
+  const hasDetails = department || program || position;
+
+  if (!hasDetails) {
+    return (
+      <p
+        style={{
+          margin: "4px 0 0",
+          fontSize: 12,
+          color: "#94a3b8",
+          fontStyle: "italic",
+        }}
+      >
+        No profile details added
+      </p>
+    );
+  }
 
   return (
     <div
       style={{
         display: "flex",
-        flexDirection: "column",
-        gap: 4,
-        marginTop: 5,
+        alignItems: "center",
+        gap: 7,
+        flexWrap: "wrap",
+        marginTop: 7,
       }}
     >
-      {rows.map(({ label, value }, index) => (
-        <div
-          key={`${label}-${index}`}
-          style={{ display: "flex", alignItems: "center", gap: 8 }}
-        >
-          <FieldLabel label={label} />
-
-          <span
-            style={{
-              fontSize: 12,
-              color: value ? "#374151" : "#cbd5e1",
-              fontStyle: value ? "normal" : "italic",
-              fontWeight: value ? 500 : 400,
-            }}
-          >
-            {value || "not set"}
-          </span>
-        </div>
-      ))}
+      <DetailChip label="Department" value={department} />
+      <DetailChip label="Program" value={program} />
+      <DetailChip label="Position" value={position} />
     </div>
   );
 }
@@ -917,6 +962,47 @@ function OverviewTab({
               )
             )}
           </div>
+        </div>
+
+        <div className="cp-grid-2" style={{ marginTop: 14 }}>
+          <div className="cp-field">
+            <label className="cp-label">Category</label>
+            <select
+              className="cp-input"
+              value={form.category}
+              onChange={(e) => setForm({ ...form, category: e.target.value })}
+            >
+              <option value="">— Select Category —</option>
+              <option value="Basic Research">Basic Research</option>
+              <option value="Applied Research">Applied Research</option>
+              <option value="Developmental Research">Developmental Research</option>
+              <option value="Action Research">Action Research</option>
+            </select>
+          </div>
+
+          <div className="cp-field">
+            <label className="cp-label">Lead Agency</label>
+            <input
+              className="cp-input"
+              type="text"
+              placeholder="e.g. Caraga State University"
+              value={form.lead_agency}
+              onChange={(e) => setForm({ ...form, lead_agency: e.target.value })}
+            />
+          </div>
+
+          <div className="cp-field">
+            <label className="cp-label">Site / Area</label>
+            <input
+              className="cp-input"
+              type="text"
+              placeholder="e.g. Main Campus"
+              value={form.site_area}
+              onChange={(e) => setForm({ ...form, site_area: e.target.value })}
+            />
+          </div>
+
+          <div />
         </div>
 
         <div className="cp-grid-2" style={{ marginTop: 14 }}>
@@ -2096,6 +2182,9 @@ function OutputsTab({
       <div class="info-grid">
         <span class="info-label">Title</span><span class="info-value">${form.title || "—"}</span>
         <span class="info-label">Type</span><span class="info-value">${form.scholarly_work_type || "—"}</span>
+        <span class="info-label">Category</span><span class="info-value">${form.category || "—"}</span>
+        <span class="info-label">Lead Agency</span><span class="info-value">${form.lead_agency || "—"}</span>
+        <span class="info-label">Site / Area</span><span class="info-value">${form.site_area || "—"}</span>
         <span class="info-label">Total Budget</span><span class="info-value">${form.total_budget ? "₱" + Number(form.total_budget).toLocaleString() : "—"}</span>
         <span class="info-label">Start Date</span><span class="info-value">${fmtDate(form.start_date)}</span>
         <span class="info-label">End Date</span><span class="info-value">${fmtDate(form.end_date)}</span>
@@ -2336,6 +2425,9 @@ function OutputsTab({
         <Section icon={BookOpen} title="I. Basic Information">
           <Row label="Title" value={form.title} />
           <Row label="Type of Scholarly Work" value={form.scholarly_work_type} />
+          <Row label="Category" value={form.category} />
+          <Row label="Lead Agency" value={form.lead_agency} />
+          <Row label="Site / Area" value={form.site_area} />
           <Row
             label="Total Proposed Budget"
             value={
@@ -2717,15 +2809,18 @@ export default function Proposals() {
 
         setForm((cur) => ({
           ...cur,
-          title: project.title || "",
+          title: project.title || proposal.title || "",
           scholarly_work_type:
             project.scholarly_work_type ||
             project.type ||
             proposal.scholarly_work_type ||
             "Research",
-          total_budget: project.total_budget || project.budget || "",
-          start_date: project.start_date || "",
-          end_date: project.end_date || "",
+          category: project.category || proposal.category || "",
+          lead_agency: project.lead_agency || proposal.lead_agency || "",
+          site_area: project.site_area || proposal.site_area || "",
+          total_budget: project.total_budget || project.budget || proposal.total_budget || "",
+          start_date: project.start_date || proposal.start_date || "",
+          end_date: project.end_date || proposal.end_date || "",
           proponents: loadedProponents,
           signatures: loadedSignatures,
           similar_work_elsewhere: !!proposal.similar_work_elsewhere,
@@ -2818,6 +2913,9 @@ export default function Proposals() {
     [
       "title",
       "scholarly_work_type",
+      "category",
+      "lead_agency",
+      "site_area",
       "total_budget",
       "start_date",
       "end_date",

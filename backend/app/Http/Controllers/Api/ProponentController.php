@@ -9,22 +9,43 @@ use Illuminate\Http\Request;
 
 class ProponentController extends Controller
 {
+    private function formatProponent($p)
+    {
+        $personnel = $p->personnel;
+
+        return [
+            'id'           => $p->id,
+            'personnel_id' => $personnel?->id,
+            'name'         => $personnel?->name,
+            'email'        => $personnel?->email,
+
+            // This fixes the empty department issue
+            'department'   => $personnel?->department
+                ?: $personnel?->departmentCenter?->name
+                ?: $personnel?->college?->name
+                ?: '—',
+
+            'program'      => $personnel?->program,
+            'position'     => $personnel?->position,
+            'role'         => $p->role,
+            'cv_path'      => $p->cv_path,
+        ];
+    }
+
     // GET /api/projects/{projectId}/team
     public function index($projectId)
     {
         $project = ResearchProject::findOrFail($projectId);
 
-        $team = $project->proponents()->with('personnel')->get()
-            ->map(function ($p) {
-                return [
-                    'id'         => $p->id,
-                    'name'       => $p->personnel->name,
-                    'email'      => $p->personnel->email,
-                    'department' => $p->personnel->departmentCenter?->name ?? '',
-                    'role'       => $p->role,
-                    'cv_path'    => $p->cv_path,
-                ];
-            });
+        $team = $project->proponents()
+            ->with([
+                'personnel',
+                'personnel.departmentCenter',
+                'personnel.college',
+            ])
+            ->get()
+            ->map(fn ($p) => $this->formatProponent($p))
+            ->values();
 
         return response()->json($team);
     }
@@ -40,13 +61,14 @@ class ProponentController extends Controller
             'role'         => 'required|in:Leader,Co-Leader,Member',
         ]);
 
-        // Check if already a proponent
         $existing = Proponent::where('research_project_id', $projectId)
             ->where('personnel_id', $data['personnel_id'])
             ->first();
 
         if ($existing) {
-            return response()->json(['message' => 'This person is already a team member.'], 422);
+            return response()->json([
+                'message' => 'This person is already a team member.',
+            ], 422);
         }
 
         $proponent = Proponent::create([
@@ -55,7 +77,13 @@ class ProponentController extends Controller
             'role'                => $data['role'],
         ]);
 
-        return response()->json($proponent->load('personnel'), 201);
+        $proponent->load([
+            'personnel',
+            'personnel.departmentCenter',
+            'personnel.college',
+        ]);
+
+        return response()->json($this->formatProponent($proponent), 201);
     }
 
     // PUT /api/projects/{projectId}/team/{proponentId}
@@ -71,9 +99,17 @@ class ProponentController extends Controller
             'role' => 'required|in:Leader,Co-Leader,Member',
         ]);
 
-        $proponent->update($data);
+        $proponent->update([
+            'role' => $data['role'],
+        ]);
 
-        return response()->json($proponent->load('personnel'));
+        $proponent->load([
+            'personnel',
+            'personnel.departmentCenter',
+            'personnel.college',
+        ]);
+
+        return response()->json($this->formatProponent($proponent));
     }
 
     // DELETE /api/projects/{projectId}/team/{proponentId}
@@ -85,13 +121,16 @@ class ProponentController extends Controller
         $proponent = Proponent::where('research_project_id', $projectId)
             ->findOrFail($proponentId);
 
-        // Prevent deleting the project leader
         if ($proponent->role === 'Leader') {
-            return response()->json(['message' => 'Cannot remove the project leader.'], 422);
+            return response()->json([
+                'message' => 'Cannot remove the project leader.',
+            ], 422);
         }
 
         $proponent->delete();
 
-        return response()->json(['message' => 'Team member removed.']);
+        return response()->json([
+            'message' => 'Team member removed.',
+        ]);
     }
 }
