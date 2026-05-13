@@ -74,7 +74,7 @@ class Proposal extends Model
         'similar_work_elsewhere' => 'boolean',
 
         'submitted_at'          => 'datetime',
-        'other_agency_amount'   => 'decimal:2',
+        'other_agency_amount'   => 'string',
 
         /*
         |--------------------------------------------------------------------------

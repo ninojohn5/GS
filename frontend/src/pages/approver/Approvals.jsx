@@ -15,6 +15,8 @@ import {
   Calendar,
   Star,
   Eye,
+  AlertCircle,
+  Paperclip,
 } from "lucide-react";
 
 const SB = {
@@ -259,6 +261,7 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
   const [hasDrawn, setHasDrawn] = useState(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [remarks, setRemarks] = useState("");
+  const [remarksError, setRemarksError] = useState("");
   const [refNo, setRefNo] = useState("");
   const [approvalDate, setApprovalDate] = useState(() => {
     const d = new Date();
@@ -266,6 +269,24 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
       d.getMonth() + 1
     ).padStart(2, "0")}/${d.getFullYear()}`;
   });
+  const [projectDocs, setProjectDocs] = useState(null);
+
+  // Fetch project docs when modal opens
+  useEffect(() => {
+    if (!proposal?.id) return;
+    api.get(`/projects/${proposal.id}`).then((res) => {
+      const p = res.data || {};
+      const base = window.location.origin;
+      const toUrl = (path) => path ? `${base}/storage/${path}` : null;
+      setProjectDocs([
+        { label: "Proposal Form",  url: toUrl(p.proposal_form_path || p.proposal_form) },
+        { label: "CV(s)",          url: toUrl(Array.isArray(p.cv_paths) ? p.cv_paths[0] : p.cv_paths || p.cv_files) },
+        { label: "Work Plan",      url: toUrl(p.work_plan_path || p.work_plan_file) },
+        { label: "Framework",      url: toUrl(p.framework_path || p.framework_file) },
+        { label: "References",     url: toUrl(p.references_path || p.references_file) },
+      ].filter((d) => d.url));
+    }).catch(() => setProjectDocs([]));
+  }, [proposal?.id]);
 
   const canvasRef = useRef(null);
   const lastPos = useRef(null);
@@ -341,6 +362,17 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
   };
 
   const act = async (action) => {
+    setRemarksError("");
+
+    if ((action === "return" || action === "reject") && !remarks.trim()) {
+      setRemarksError(
+        action === "return"
+          ? "Please state what needs to be changed. The researcher needs this to revise their proposal."
+          : "Please provide a reason for rejecting this proposal."
+      );
+      return;
+    }
+
     const sig = await buildSig();
 
     onAct({
@@ -427,6 +459,42 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
 
           {error && <div style={MO.err}>{error}</div>}
 
+          {/* Documents section */}
+          <div style={MO.field}>
+            <label style={{ ...MO.label, display: "flex", alignItems: "center", gap: 6 }}>
+              <Paperclip size={14} color="#374151" /> Submitted Documents
+            </label>
+            {projectDocs === null ? (
+              <p style={{ fontSize: 12, color: "#9ca3af" }}>Loading documents...</p>
+            ) : projectDocs.length === 0 ? (
+              <p style={{ fontSize: 12, color: "#9ca3af" }}>No documents uploaded.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {projectDocs.map((doc) => (
+                  <a
+                    key={doc.label}
+                    href={doc.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "8px 12px", borderRadius: 8,
+                      border: "1px solid #e5e7eb", background: "#f9fafb",
+                      color: "#1d4ed8", fontSize: 13, fontWeight: 500,
+                      textDecoration: "none",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "#f9fafb"}
+                  >
+                    <FileText size={14} color="#1d4ed8" />
+                    {doc.label}
+                    <Eye size={13} style={{ marginLeft: "auto", color: "#6b7280" }} />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div style={MO.field}>
             <label style={MO.label}>
               Reference No{" "}
@@ -444,14 +512,37 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
           </div>
 
           <div style={MO.field}>
-            <label style={MO.label}>Remarks</label>
+            <label style={MO.label}>
+              Remarks{" "}
+              <span style={{ color: "#dc2626", fontWeight: 500, fontSize: 12 }}>
+                * required when returning or rejecting
+              </span>
+            </label>
 
             <textarea
-              style={MO.textarea}
-              placeholder="Add remarks or notes…"
+              style={{
+                ...MO.textarea,
+                borderColor: remarksError ? "#fca5a5" : "#d1d5db",
+                background: remarksError ? "#fef2f2" : "#fff",
+              }}
+              placeholder="Add remarks or notes… (required if returning or rejecting)"
               value={remarks}
-              onChange={(e) => setRemarks(e.target.value)}
+              onChange={(e) => {
+                setRemarks(e.target.value);
+                if (e.target.value.trim()) setRemarksError("");
+              }}
             />
+
+            {remarksError && (
+              <div style={{
+                display: "flex", alignItems: "flex-start", gap: 7,
+                background: "#fef2f2", border: "1px solid #fecaca",
+                borderRadius: 8, padding: "9px 12px",
+                fontSize: 13, color: "#dc2626",
+              }}>
+                ⚠ {remarksError}
+              </div>
+            )}
           </div>
 
           <div style={MO.field}>

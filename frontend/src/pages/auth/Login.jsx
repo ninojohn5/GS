@@ -8,24 +8,21 @@ import schoolBg from "../../assets/school.png";
 import { loginUser, dashboardRoute } from "../../utils/auth";
 
 const ROLE_COLORS = {
-  researcher:         "#1f7a1f",
-  evaluator:          "#391676",
-  admin:              "#f59e0b",
-  approver:           "#141617",
-  rde_division_chief: "#391676",
-  campus_director:    "#391676",
-  vprie:              "#141617",
-  president:          "#141617",
+  researcher:      "#1f7a1f",
+  evaluator:       "#391676",
+  admin:           "#f59e0b",
+  rdiso_director:  "#391676",
+  vprie:           "#141617",
+  president:       "#141617",
 };
 
 const ROLES = [
-  { value: "researcher",         label: "Researcher",           color: "#1f7a1f" },
-  { value: "evaluator",          label: "Evaluator",            color: "#391676" },
-  { value: "admin",              label: "Admin",                color: "#f59e0b" },
-  { value: "rde_division_chief", label: "RDE Division Chief",   color: "#391676" },
-  { value: "campus_director",    label: "Campus Director",      color: "#391676" },
-  { value: "vprie",              label: "VPRIE",                color: "#141617" },
-  { value: "president",          label: "University President", color: "#141617" },
+  { value: "researcher",     label: "Researcher",                    color: "#1f7a1f" },
+  { value: "evaluator",      label: "Evaluator",                     color: "#391676" },
+  { value: "admin",          label: "Admin",                         color: "#f59e0b" },
+  { value: "rdiso_director", label: "RDISO Director / ESO Director", color: "#391676" },
+  { value: "vprie",          label: "VPRIE",                         color: "#141617" },
+  { value: "president",      label: "University President",          color: "#141617" },
 ];
 
 export default function Login() {

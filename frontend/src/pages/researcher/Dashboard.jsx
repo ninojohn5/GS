@@ -369,6 +369,16 @@ export default function Dashboard() {
 
   const approvalRate = pct(approved, myProjects);
 
+  const localCount = Number(
+    stats?.local_count ??
+      projects.filter((p) => (p.funding_type || "local") === "local").length
+  );
+
+  const externalCount = Number(
+    stats?.external_count ??
+      projects.filter((p) => p.funding_type === "external").length
+  );
+
   const latestProjects = [...projects]
     .sort((a, b) => {
       const da = new Date(a.updated_at || a.created_at || a.submitted_at || 0);
@@ -635,6 +645,28 @@ export default function Dashboard() {
                 value={loading ? "—" : fmtCurrency(totalBudget)}
                 sub="Across your proposals"
               />
+            </div>
+
+            {/* Funding Type Breakdown */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+              <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#15803d" }}>{loading ? "—" : localCount}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#166534" }}>Locally Funded</p>
+                </div>
+              </div>
+              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 12, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: "#dbeafe", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                </div>
+                <div>
+                  <p style={{ margin: 0, fontSize: 22, fontWeight: 800, color: "#1d4ed8" }}>{loading ? "—" : externalCount}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 12, color: "#1e40af" }}>Externally Funded</p>
+                </div>
+              </div>
             </div>
 
             {/* Recent projects and summary */}

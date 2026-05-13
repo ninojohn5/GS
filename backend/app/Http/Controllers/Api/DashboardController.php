@@ -27,8 +27,7 @@ class DashboardController extends Controller
         }
 
         if (in_array($user->role, [
-            'rde_division_chief',
-            'campus_director',
+            'rdiso_director',
             'vprie',
             'president',
         ])) {
@@ -66,6 +65,8 @@ class DashboardController extends Controller
             'for_revision'     => $statusCounts->get('For Revision', 0),
             'rejected'         => $statusCounts->get('Rejected', 0),
             'total_budget'     => $projects->sum('budget'),
+            'local_count'      => $projects->where('funding_type', 'local')->count() + $projects->whereNull('funding_type')->count(),
+            'external_count'   => $projects->where('funding_type', 'external')->count(),
             'status_counts'    => $statusCounts,
             'recent_activity'  => $recentActivity,
         ]);
@@ -119,17 +120,15 @@ class DashboardController extends Controller
     private function approverStats($user)
     {
         $roleSequence = [
-            'rde_division_chief' => 1,
-            'campus_director'    => 2,
-            'vprie'              => 3,
-            'president'          => 4,
+            'rdiso_director' => 1,
+            'vprie'          => 2,
+            'president'      => 3,
         ];
 
         $requiredStatus = [
             1 => 'Evaluated',
             2 => 'Endorsed',
             3 => 'Recommended',
-            4 => 'Forwarded',
         ];
 
         $sequence = $roleSequence[$user->role] ?? null;
@@ -298,6 +297,9 @@ class DashboardController extends Controller
             'total_projects'   => $visibleProjects->count(),
             'total_budget'     => $visibleProjects->sum('budget'),
 
+            'local_count'      => $visibleProjects->where('funding_type', 'local')->count() + $visibleProjects->whereNull('funding_type')->count(),
+            'external_count'   => $visibleProjects->where('funding_type', 'external')->count(),
+
             'byStatus' => [
                 'approved'         => $statusCounts->get('Approved', 0),
                 'in_progress'      => $statusCounts->get('In Progress', 0),
@@ -313,4 +315,4 @@ class DashboardController extends Controller
             'byDepartment' => [],
         ]);
     }
-}
+}   

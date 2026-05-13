@@ -671,6 +671,25 @@ function ScheduleModal({ proposal, evaluatorList, onClose, onSave, saving }) {
 
 function ViewModal({ proposal, onClose }) {
   const sb = STATUS_MAP[proposal.status] || STATUS_MAP.Pending;
+  const [projectDocs, setProjectDocs] = useState(null);
+
+  useEffect(() => {
+    if (!proposal?.id) return;
+    api.get(`/projects/${proposal.id}`).then((res) => {
+      const p = res.data || {};
+      const base = window.location.origin;
+      const toUrl = (path) => path ? `${base}/storage/${path}` : null;
+      const cvPaths = Array.isArray(p.cv_paths) ? p.cv_paths : (p.cv_paths ? [p.cv_paths] : []);
+      const docs = [
+        { label: "Proposal Form", url: toUrl(p.proposal_form_path || p.proposal_form) },
+        ...cvPaths.map((path, i) => ({ label: `CV (${i + 1})`, url: toUrl(path) })),
+        { label: "Work Plan",     url: toUrl(p.work_plan_path || p.work_plan_file) },
+        { label: "Framework",     url: toUrl(p.framework_path || p.framework_file) },
+        { label: "References",    url: toUrl(p.references_path || p.references_file) },
+      ].filter((d) => d.url);
+      setProjectDocs(docs);
+    }).catch(() => setProjectDocs([]));
+  }, [proposal?.id]);
 
   return (
     <div
@@ -719,32 +738,18 @@ function ViewModal({ proposal, onClose }) {
             {[
               ["Researcher", proposal.researcher],
               ["Department", proposal.department],
-              ["Budget", `₱${Number(proposal.budget || 0).toLocaleString()}`],
+              ["Budget", proposal.budget || "—"],
+              ["Funding", proposal.funding_type === "external" ? `External (${proposal.funding_agency || "—"})` : "Local"],
               ["Submitted", proposal.submitted_date],
               ["Defense Date", proposal.defense_date || "Not scheduled"],
               ["Defense Time", proposal.defense_time || "Not set"],
               ["Venue", proposal.venue || "Not set"],
             ].map(([label, value]) => (
               <div key={label}>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 11,
-                    color: "#9ca3af",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
+                <p style={{ margin: 0, fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                   {label}
                 </p>
-                <p
-                  style={{
-                    margin: "3px 0 0",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: "#111827",
-                  }}
-                >
+                <p style={{ margin: "3px 0 0", fontSize: 14, fontWeight: 600, color: "#111827" }}>
                   {value || "N/A"}
                 </p>
               </div>
@@ -752,39 +757,45 @@ function ViewModal({ proposal, onClose }) {
           </div>
 
           {proposal.evaluators?.length > 0 && (
-            <div>
-              <p
-                style={{
-                  margin: "0 0 8px",
-                  fontSize: 11,
-                  color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
-              >
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ margin: "0 0 8px", fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 Assigned Evaluators
               </p>
-
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {proposal.evaluators.map((ev, i) => (
-                  <span
-                    key={i}
-                    style={{
-                      padding: "4px 12px",
-                      borderRadius: 20,
-                      background: "#eff6ff",
-                      color: "#1d4ed8",
-                      border: "1px solid #bfdbfe",
-                      fontSize: 13,
-                      fontWeight: 500,
-                    }}
-                  >
+                  <span key={i} style={{ padding: "4px 12px", borderRadius: 20, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", fontSize: 13, fontWeight: 500 }}>
                     {ev}
                   </span>
                 ))}
               </div>
             </div>
           )}
+
+          {/* Documents section */}
+          <div>
+            <p style={{ margin: "0 0 8px", fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              📎 Uploaded Documents
+            </p>
+            {projectDocs === null ? (
+              <p style={{ fontSize: 13, color: "#9ca3af" }}>Loading documents...</p>
+            ) : projectDocs.length === 0 ? (
+              <p style={{ fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>No documents uploaded yet.</p>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {projectDocs.map((doc) => (
+                  <a key={doc.label} href={doc.url} target="_blank" rel="noopener noreferrer"
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#1d4ed8", fontSize: 13, fontWeight: 500, textDecoration: "none" }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "#f9fafb"}
+                  >
+                    <FileText size={14} color="#1d4ed8" />
+                    {doc.label}
+                    <Eye size={13} style={{ marginLeft: "auto", color: "#6b7280" }} />
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

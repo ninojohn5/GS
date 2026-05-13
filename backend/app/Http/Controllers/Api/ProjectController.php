@@ -55,7 +55,7 @@ class ProjectController extends Controller
     {
         $data = $request->validate([
             'title'                    => 'required|string|max:255',
-            'type'                     => 'required|in:Research,ICT,Extension,ORGMS,Others',
+            'type'                     => 'required|in:Research,Extension,Others',
             'category'                 => 'nullable|in:Basic Research,Applied Research,Developmental Research,Action Research',
             'department_center_id'     => 'nullable|exists:department_centers,id',
             'lead_agency'              => 'nullable|string',
@@ -67,7 +67,10 @@ class ProjectController extends Controller
             'end_date'                 => 'nullable|date|after_or_equal:start_date',
             'expected_completion_date' => 'nullable|date',
             'duration_months'          => 'nullable|integer|min:1',
-            'budget'                   => 'nullable|numeric|min:0',
+            'budget'                   => 'nullable|string|max:255',
+            'funding_type'             => 'nullable|in:local,external',
+            'funding_agency'           => 'nullable|string|max:255',
+            'external_amount'          => 'nullable|string|max:255',
             'nature_and_significance'  => 'nullable|string',
             'issues_to_address'        => 'nullable|string',
             'objectives'               => 'nullable|string',
@@ -176,7 +179,7 @@ class ProjectController extends Controller
 
         $data = $request->validate([
             'title'                   => 'sometimes|string|max:255',
-            'type'                    => 'sometimes|in:Research,ICT,Extension,ORGMS,Others',
+            'type'                    => 'sometimes|in:Research,Extension,Others',
             'category'                => 'nullable|in:Basic Research,Applied Research,Developmental Research,Action Research',
             'department_center_id'    => 'nullable|exists:department_centers,id',
             'lead_agency'             => 'nullable|string',
@@ -184,7 +187,10 @@ class ProjectController extends Controller
             'site_area'               => 'nullable|string',
             'start_date'              => 'nullable|date',
             'end_date'                => 'nullable|date',
-            'budget'                  => 'nullable|numeric|min:0',
+            'budget'                  => 'nullable|string|max:255',
+            'funding_type'            => 'nullable|in:local,external',
+            'funding_agency'          => 'nullable|string|max:255',
+            'external_amount'         => 'nullable|string|max:255',
             'nature_and_significance' => 'nullable|string',
             'issues_to_address'       => 'nullable|string',
             'objectives'              => 'nullable|string',

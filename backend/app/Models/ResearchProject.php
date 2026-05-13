@@ -93,8 +93,8 @@ class ResearchProject extends Model
         'end_date'                 => 'date',
         'expected_completion_date' => 'date',
 
-        'budget'                   => 'decimal:2',
-        'total_budget'             => 'decimal:2',
+        'budget'                   => 'string',
+        'total_budget'             => 'string',
 
         /*
         |--------------------------------------------------------------------------

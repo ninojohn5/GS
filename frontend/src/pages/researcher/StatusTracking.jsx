@@ -247,10 +247,9 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
       : `<tr><td colspan="6" class="muted italic">No research outputs uploaded yet.</td></tr>`;
 
   const approvalSteps = [
-    { status: "Endorsed", role: "RDE Division Chief", action: "Endorsed" },
-    { status: "Recommended", role: "Campus Director", action: "Recommended" },
-    { status: "Forwarded", role: "VPRIE", action: "Forwarded" },
-    { status: "Approved", role: "University President", action: "Approved" },
+    { status: "Endorsed",    role: "RDISO Director / ESO Director",                    action: "Endorsed"    },
+    { status: "Recommended", role: "Vice President for Research, Innovation & Extension", action: "Recommended" },
+    { status: "Approved",    role: "University President",                              action: "Approved"    },
   ];
 
   const approvalRows = approvalSteps
@@ -583,7 +582,10 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
           <span class="value">${project.type || project.scholarly_work_type || "Research"}</span>
 
           <span class="label">Total Proposed Budget</span>
-          <span class="value">₱${Number(project.budget || project.total_budget || 0).toLocaleString()}</span>
+          <span class="value">${project.budget || project.total_budget || "—"}</span>
+
+          <span class="label">Funding Type</span>
+          <span class="value">${project.funding_type === "external" ? `Externally Funded (${project.funding_agency || "—"})` : "Locally Funded"}</span>
 
           <span class="label">Proposed Start Date</span>
           <span class="value">${fmtDate(project.start_date)}</span>
@@ -708,24 +710,85 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
         </p>
       </div>
 
-      <div class="sig-grid">
-        <div class="sig-block">
-          ${
-            researcherSig
-              ? `<img src="${researcherSig}" class="sig-img" alt="Researcher Signature" />`
-              : `<div class="sig-line"></div>`
-          }
-          <p class="sig-name">Prepared by: Lead Researcher / Proponent</p>
-        </div>
+      <div class="section">
+        <div class="section-title">VII. Uploaded Documents</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Document Type</th>
+              <th>File Name</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${[
+              { label: "Proposal Form",   path: project.proposal_form_path || project.proposal_form },
+              { label: "CV(s)",           path: Array.isArray(project.cv_paths) ? project.cv_paths.join(", ") : (project.cv_paths || project.cv_files) },
+              { label: "Work Plan",       path: project.work_plan_path || project.work_plan_file },
+              { label: "Framework",       path: project.framework_path || project.framework_file },
+              { label: "References",      path: project.references_path || project.references_file },
+            ].map((doc) => `
+              <tr>
+                <td class="strong">${doc.label}</td>
+                <td>${doc.path ? String(doc.path).split("/").pop() : "<span class='muted italic'>Not uploaded</span>"}</td>
+                <td class="center"><span class="${doc.path ? "status-pill" : "muted italic"}">${doc.path ? "Uploaded" : "Missing"}</span></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
 
-        <div class="sig-block">
-          ${
-            presidentSig
-              ? `<img src="${presidentSig}" class="sig-img" alt="President Signature" />`
-              : `<div class="sig-line"></div>`
-          }
-          <p class="sig-name">Approved by: University President</p>
-        </div>
+      <div style="margin-top:28px; border-top:2px solid #1f7a1f; padding-top:16px;">
+        <p style="font-family:Arial,sans-serif; font-size:8pt; font-weight:700; color:#1f7a1f; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:16px;">
+          Official Signatures — F-RPP-001
+        </p>
+        <table style="width:100%; border-collapse:collapse; font-family:Arial,sans-serif; font-size:8pt;">
+          <thead>
+            <tr style="background:#f8fafc;">
+              <th style="padding:6px 8px; border-bottom:1.5px solid #d1d5db; text-align:left; color:#334155;">Role</th>
+              <th style="padding:6px 8px; border-bottom:1.5px solid #d1d5db; text-align:center; color:#334155;">Signature</th>
+              <th style="padding:6px 8px; border-bottom:1.5px solid #d1d5db; text-align:left; color:#334155;">Name &amp; Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Evaluated by:<br/><span style="font-weight:400; color:#64748b;">Evaluation Committee</span></td>
+              <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;"><div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div></td>
+              <td style="padding:10px 8px; border-bottom:1px solid #edf2f7;"><div style="border-bottom:1px solid #374151; min-height:36px;"></div><div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ___________</div></td>
+            </tr>
+            <tr>
+              <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Reviewed &amp; Evaluated by:<br/><span style="font-weight:400; color:#64748b;">RDISO Director / ESO Director</span></td>
+              <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;">
+                ${getSig("Endorsed") ? `<img src="${getSig("Endorsed")}" style="max-height:32px; max-width:110px; object-fit:contain; display:block; margin:0 auto;" />` : `<div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div>`}
+              </td>
+              <td style="padding:10px 8px; border-bottom:1px solid #edf2f7;">
+                <div style="font-weight:600;">${[...history].reverse().find(h => h.status === "Endorsed")?.action_by || "___________________________"}</div>
+                <div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ${[...history].reverse().find(h => h.status === "Endorsed")?.date || "___________"}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Recommending Approval:<br/><span style="font-weight:400; color:#64748b;">Vice President for Research, Innovation &amp; Extension</span></td>
+              <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;">
+                ${getSig("Recommended") ? `<img src="${getSig("Recommended")}" style="max-height:32px; max-width:110px; object-fit:contain; display:block; margin:0 auto;" />` : `<div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div>`}
+              </td>
+              <td style="padding:10px 8px; border-bottom:1px solid #edf2f7;">
+                <div style="font-weight:600;">${[...history].reverse().find(h => h.status === "Recommended")?.action_by || "___________________________"}</div>
+                <div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ${[...history].reverse().find(h => h.status === "Recommended")?.date || "___________"}</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px 8px; font-weight:700;">Approved by:<br/><span style="font-weight:400; color:#64748b;">SUC President</span></td>
+              <td style="padding:10px 8px; text-align:center; min-width:120px;">
+                ${getSig("Approved") ? `<img src="${getSig("Approved")}" style="max-height:32px; max-width:110px; object-fit:contain; display:block; margin:0 auto;" />` : `<div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div>`}
+              </td>
+              <td style="padding:10px 8px;">
+                <div style="font-weight:600;">${[...history].reverse().find(h => h.status === "Approved")?.action_by || "___________________________"}</div>
+                <div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ${[...history].reverse().find(h => h.status === "Approved")?.date || "___________"}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p style="font-size:7pt; color:#94a3b8; margin-top:6px;">F-RPP-001 Rev. 03 10/06/2023</p>
       </div>
 
       <div class="footer">
@@ -955,6 +1018,31 @@ export default function StatusTracking() {
               </div>
             </div>
           )}
+
+          {/* For Revision banner */}
+          {project?.current_status === "For Revision" && (() => {
+            const returnEntry = history.find((h) => h.status === "For Revision");
+            return returnEntry ? (
+              <div style={{
+                display: "flex", gap: 12, alignItems: "flex-start",
+                background: "#fffbeb", border: "1.5px solid #fcd34d",
+                borderRadius: 12, padding: "16px 18px", marginBottom: 16,
+              }}>
+                <span style={{ fontSize: 22 }}>⚠️</span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: 14, color: "#92400e" }}>
+                    Your proposal was returned for revision
+                  </p>
+                  <p style={{ margin: "6px 0 0", fontSize: 13, color: "#78350f", lineHeight: 1.6 }}>
+                    <strong>Reason:</strong> {returnEntry.remarks || "No reason provided."}
+                  </p>
+                  <p style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>
+                    Returned by <strong>{returnEntry.action_by}</strong> on {returnEntry.date}
+                  </p>
+                </div>
+              </div>
+            ) : null;
+          })()}
 
           {project && (
             <div className="cp-section" style={{ marginBottom: 16 }}>

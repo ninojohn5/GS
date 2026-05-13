@@ -15,43 +15,34 @@ class ApprovalController extends Controller
     |--------------------------------------------------------------------------
     | Approval Flow
     |--------------------------------------------------------------------------
-    | Evaluators Done     => Evaluated
-    | RDE Division Chief  => Endorsed
-    | Campus Director     => Recommended
-    | VPIE / VPRIE        => Forwarded
-    | President           => Approved / Rejected
+    | Evaluators Done          => Evaluated
+    | RDISO Director/ESO Dir   => Endorsed
+    | VPRIE                    => Recommended
+    | President                => Approved / Rejected
     */
 
     private const ROLE_SEQUENCE = [
-        'rde_division_chief' => 1,
-        'campus_director'    => 2,
-        'vpie'               => 3,
-        'vprie'              => 3,
-        'president'          => 4,
+        'rdiso_director' => 1,
+        'vprie'          => 2,
+        'president'      => 3,
     ];
 
     private const ROLE_ACTION = [
-        'rde_division_chief' => 'Endorsed',
-        'campus_director'    => 'Recommended',
-        'vpie'               => 'Forwarded',
-        'vprie'              => 'Forwarded',
-        'pres president'     => 'Approved',
-        'president'          => 'Approved',
+        'rdiso_director' => 'Endorsed',
+        'vprie'          => 'Recommended',
+        'president'      => 'Approved',
     ];
 
     private const ROLE_LABELS = [
-        'rde_division_chief' => 'Division Chief for RDIE',
-        'campus_director'    => 'Campus Director',
-        'vpie'               => 'Vice President for RIES',
-        'vprie'              => 'Vice President for RIES',
-        'president'          => 'University President',
+        'rdiso_director' => 'RDISO Director / ESO Director',
+        'vprie'          => 'Vice President for Research, Innovation and Extension',
+        'president'      => 'University President',
     ];
 
     private const REQUIRED_STATUS = [
         1 => 'Evaluated',
         2 => 'Endorsed',
         3 => 'Recommended',
-        4 => 'Forwarded',
     ];
 
     /*
@@ -162,7 +153,10 @@ class ApprovalController extends Controller
         $data = $request->validate([
             'research_project_id' => 'required|exists:research_projects,id',
             'action'              => 'required|in:approve,reject,return',
-            'remarks'             => 'nullable|string',
+            'remarks'             => [
+                in_array($request->input('action'), ['reject', 'return']) ? 'required' : 'nullable',
+                'string',
+            ],
             'reference_no'        => 'nullable|string',
             'signature_image'     => 'nullable|string',
             'signature_type'      => 'nullable|in:draw,upload,type',

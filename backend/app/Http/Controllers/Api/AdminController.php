@@ -15,7 +15,7 @@ class AdminController extends Controller
     // GET /api/admin/proposals
     public function proposals(Request $request)
     {
-        $proposals = ResearchProject::whereIn('status', [
+        $query = ResearchProject::whereIn('status', [
                 'Submitted',
                 'Presentation Scheduled',
                 'Under Evaluation',
@@ -32,9 +32,13 @@ class AdminController extends Controller
                 'departmentCenter',
                 'proposal',
                 'oralPresentation.evaluators',
-            ])
-            ->latest()
-            ->get();
+            ]);
+
+        if ($request->filled('funding_type')) {
+            $query->where('funding_type', $request->input('funding_type'));
+        }
+
+        $proposals = $query->latest()->get();
 
         return response()->json($proposals);
     }

@@ -57,7 +57,7 @@ class ProposalController extends Controller
             'external_collab_details' => 'nullable|string',
             'submitted_elsewhere'     => 'nullable',
             'other_agency_name'       => 'nullable|string',
-            'other_agency_amount'     => 'nullable|numeric',
+            'other_agency_amount'     => 'nullable|string|max:255',
             'difference_explanation'  => 'nullable|string',
         ]);
 
@@ -140,7 +140,7 @@ class ProposalController extends Controller
             'lead_agency'              => 'nullable|string|max:255',
             'site_area'                => 'nullable|string|max:255',
 
-            'total_budget'             => 'nullable|numeric',
+            'total_budget'             => 'nullable|string|max:255',
             'start_date'               => 'nullable|date',
             'end_date'                 => 'nullable|date',
 
@@ -157,7 +157,7 @@ class ProposalController extends Controller
 
             'submitted_elsewhere'      => 'nullable',
             'other_agency_name'        => 'nullable|string',
-            'other_agency_amount'      => 'nullable|numeric',
+            'other_agency_amount'      => 'nullable|string|max:255',
             'agency_difference_extent' => 'nullable|string',
 
             'proponents'               => 'nullable|string',
@@ -172,6 +172,24 @@ class ProposalController extends Controller
 
         return DB::transaction(function () use ($request, $data, $status) {
             $project = $this->findOrCreateWorkingProject($request, $data, $status);
+
+            // CV count must match proponent count on submit
+            if ($status === 'Submitted') {
+                $proponentsRaw = json_decode($data['proponents'] ?? '[]', true);
+                $proponentCount = is_array($proponentsRaw) ? count($proponentsRaw) : 0;
+                $cvCount = $request->hasFile('cv_files') ? count($request->file('cv_files')) : 0;
+
+                // Check against existing CVs on the project
+                $existingCvs = $project->cv_files
+                    ? (is_array($project->cv_files) ? $project->cv_files : json_decode($project->cv_files, true))
+                    : [];
+
+                $totalCvs = $cvCount > 0 ? $cvCount : (is_array($existingCvs) ? count($existingCvs) : 0);
+
+                if ($proponentCount > 0 && $totalCvs < $proponentCount) {
+                    abort(422, "CV count mismatch: {$proponentCount} proponent(s) found but only {$totalCvs} CV file(s) uploaded. Please upload one CV per proponent.");
+                }
+            }
 
             $proposalFormPath = $this->storeUploadedFile($request, 'proposal_form', 'proposal_forms');
             $workPlanPath     = $this->storeUploadedFile($request, 'work_plan_file', 'work_plans');
@@ -213,8 +231,8 @@ class ProposalController extends Controller
                 'lead_agency'         => $data['lead_agency'] ?? null,
                 'site_area'           => $data['site_area'] ?? null,
 
-                'budget'              => $data['total_budget'] ?? 0,
-                'total_budget'        => $data['total_budget'] ?? 0,
+                'budget'              => $data['total_budget'] ?? null,
+                'total_budget'        => $data['total_budget'] ?? null,
                 'start_date'          => $data['start_date'] ?? null,
                 'end_date'            => $data['end_date'] ?? null,
                 'created_by'          => $request->user()->id,

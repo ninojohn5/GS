@@ -40,7 +40,7 @@ const STATUS_CFG = {
   "For Revision": { bg: "#fef3c7", color: "#d97706", border: "#fde68a", dot: "#d97706" },
 };
 
-const VIEW_TABS = ["Overview", "Team", "Evaluators", "Documents", "Schedule"];
+const VIEW_TABS = ["Overview", "Team", "Evaluators", "Documents", "Work Plan", "Schedule"];
 
 const DOCS = [
   {
@@ -146,8 +146,8 @@ const fmtTime = (value) => {
 };
 
 const fmtBudget = (value) => {
-  const amount = Number(value || 0);
-  return amount ? `₱${amount.toLocaleString()}` : "—";
+  if (!value) return "—";
+  return value;
 };
 
 const parseMaybeJson = (value, fallback) => {
@@ -795,6 +795,7 @@ export default function ProjectView() {
   const [selectedDoc, setSelectedDoc] = useState(null);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [workPlanItems, setWorkPlanItems] = useState([]);
   const [error, setError] = useState("");
 
   const oralPresentation = getRelation(project, "oral_presentation", "oralPresentation");
@@ -830,6 +831,14 @@ export default function ProjectView() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === "Work Plan" && id) {
+      api.get(`/projects/${id}/work-plan`)
+        .then((res) => setWorkPlanItems(Array.isArray(res.data) ? res.data : []))
+        .catch(() => setWorkPlanItems([]));
+    }
+  }, [activeTab, id]);
 
   const openDoc = (doc) => {
     setSelectedDoc(doc);
@@ -1358,6 +1367,78 @@ export default function ProjectView() {
                 >
                   Note: If a file does not open, run <strong>php artisan storage:link</strong> in your Laravel backend.
                 </p>
+              </div>
+            )}
+
+            {activeTab === "Work Plan" && (
+              <div className="cp-section">
+                <div className="cp-section-title">Work Plan — Gantt Chart</div>
+
+                {workPlanItems.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
+                    <ClipboardList size={36} style={{ marginBottom: 10 }} />
+                    <p style={{ margin: 0, fontSize: 14 }}>No work plan activities yet.</p>
+                  </div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
+                      <thead>
+                        <tr style={{ background: "#f9fafb" }}>
+                          <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 180 }}>Activity</th>
+                          <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 90 }}>Milestone</th>
+                          {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m) => (
+                            <th key={m} style={{ padding: "10px 6px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 40 }}>{m}</th>
+                          ))}
+                          <th style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151" }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workPlanItems.map((item, i) => {
+                          const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+                          const statusColors = {
+                            Completed: { bg: "#dcfce7", color: "#15803d" },
+                            "In Progress": { bg: "#dbeafe", color: "#1d4ed8" },
+                            Pending: { bg: "#f3f4f6", color: "#6b7280" },
+                          };
+                          const sc = statusColors[item.status] || statusColors.Pending;
+                          return (
+                            <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                              <td style={{ padding: "10px 12px", fontWeight: 600, color: "#111827" }}>
+                                {item.title}
+                                {item.description && (
+                                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280", fontWeight: 400 }}>{item.description}</p>
+                                )}
+                              </td>
+                              <td style={{ padding: "10px 12px", color: "#374151" }}>{item.milestone || "—"}</td>
+                              {months.map((m) => (
+                                <td key={m} style={{ padding: "10px 6px", textAlign: "center" }}>
+                                  {item[m] ? (
+                                    <div style={{
+                                      width: 22, height: 22, borderRadius: 4,
+                                      background: "#1f7a1f", margin: "0 auto",
+                                      display: "flex", alignItems: "center", justifyContent: "center",
+                                    }}>
+                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    </div>
+                                  ) : (
+                                    <div style={{ width: 22, height: 22, borderRadius: 4, background: "#f3f4f6", margin: "0 auto" }} />
+                                  )}
+                                </td>
+                              ))}
+                              <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                                <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color }}>
+                                  {item.status || "Pending"}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 

@@ -141,7 +141,10 @@ class EvaluationController extends Controller
             ->unique()
             ->values();
 
-        if (!$assignedEvaluatorIds->contains((int) $evaluatorId)) {
+        // RDISO Director can evaluate any proposal without being formally assigned
+        $isRdiso = $request->user()->role === 'rdiso_director';
+
+        if (!$isRdiso && !$assignedEvaluatorIds->contains((int) $evaluatorId)) {
             return response()->json([
                 'message' => 'You are not assigned to evaluate this proposal.',
             ], 403);
@@ -192,6 +195,8 @@ class EvaluationController extends Controller
                 ->unique()
                 ->values();
 
+            // Only mark as Evaluated when all *assigned* evaluators are done
+            // RDISO Director evaluation does not count toward this check
             $allEvaluatorsDone =
                 $assignedEvaluatorIds->count() > 0 &&
                 $submittedEvaluatorIds->count() >= $assignedEvaluatorIds->count();

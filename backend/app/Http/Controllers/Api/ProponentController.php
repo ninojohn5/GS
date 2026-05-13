@@ -71,6 +71,18 @@ class ProponentController extends Controller
             ], 422);
         }
 
+        if ($data['role'] === 'Leader') {
+            $leaderExists = Proponent::where('research_project_id', $projectId)
+                ->where('role', 'Leader')
+                ->exists();
+
+            if ($leaderExists) {
+                return response()->json([
+                    'message' => 'A project leader already exists. Only one leader is allowed per project.',
+                ], 422);
+            }
+        }
+
         $proponent = Proponent::create([
             'research_project_id' => $projectId,
             'personnel_id'        => $data['personnel_id'],

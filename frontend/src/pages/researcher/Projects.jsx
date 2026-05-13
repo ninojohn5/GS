@@ -276,11 +276,7 @@ export default function ResearchProjects() {
                           <td>{p.type || p.scholarly_work_type || "—"}</td>
 
                           <td>
-                            {p.budget || p.total_budget
-                              ? `₱${Number(
-                                  p.budget || p.total_budget
-                                ).toLocaleString()}`
-                              : "—"}
+                            {p.budget || p.total_budget || "—"}
                           </td>
 
                           <td>

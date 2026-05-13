@@ -25,13 +25,12 @@ export function clearSession() {
 // ── Role → route ────────────────────────────────────────────────────────────
 export function dashboardRoute(role) {
   const routes = {
-    researcher:         "/researcher/dashboard",
-    evaluator:          "/evaluator/dashboard",
-    admin:              "/admin/dashboard",
-    rde_division_chief: "/approver/dashboard",
-    campus_director:    "/approver/dashboard",
-    vprie:              "/approver/dashboard",
-    president:          "/approver/dashboard",
+    researcher:      "/researcher/dashboard",
+    evaluator:       "/evaluator/dashboard",
+    admin:           "/admin/dashboard",
+    rdiso_director:  "/approver/dashboard",
+    vprie:           "/approver/dashboard",
+    president:       "/approver/dashboard",
   };
   return routes[role] || "/login";
 }

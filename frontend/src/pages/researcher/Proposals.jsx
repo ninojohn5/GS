@@ -67,6 +67,9 @@ const EMPTY_FORM = {
   lead_agency: "",
   site_area: "",
   total_budget: "",
+  funding_type: "local",
+  funding_agency: "",
+  external_amount: "",
   start_date: "",
   end_date: "",
   proponents: [],
@@ -920,7 +923,7 @@ function OverviewTab({
           <div
             style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 4 }}
           >
-            {["Research", "Extension", "Instructional Material Development"].map(
+            {["Research", "Extension"].map(
               (type) => (
                 <label
                   key={type}
@@ -1005,23 +1008,82 @@ function OverviewTab({
           <div />
         </div>
 
+        {/* Row 1: Budget + Funding Type */}
         <div className="cp-grid-2" style={{ marginTop: 14 }}>
           <div className="cp-field">
-            <label className="cp-label">Total Proposed Budget (₱) *</label>
+            <label className="cp-label">Total Proposed Budget *</label>
             <input
               className="cp-input"
-              type="number"
-              min="0"
-              placeholder="e.g. 250000"
+              type="text"
+              placeholder="e.g. ₱250,000 or To be determined"
               value={form.total_budget}
-              onChange={(e) =>
-                setForm({ ...form, total_budget: e.target.value })
-              }
+              onChange={(e) => setForm({ ...form, total_budget: e.target.value })}
             />
           </div>
 
-          <div />
+          <div className="cp-field">
+            <label className="cp-label">Funding Type *</label>
+            <div style={{ display: "flex", gap: 10, marginTop: 6 }}>
+              {[
+                { value: "local",    label: "Locally Funded" },
+                { value: "external", label: "Externally Funded" },
+              ].map((ft) => (
+                <label
+                  key={ft.value}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 16px", borderRadius: 9, cursor: "pointer",
+                    border: `1.5px solid ${form.funding_type === ft.value ? "#1f7a1f" : "#e5e7eb"}`,
+                    background: form.funding_type === ft.value ? "#f0fdf4" : "#fff",
+                    fontSize: 13,
+                    fontWeight: form.funding_type === ft.value ? 600 : 400,
+                    color: form.funding_type === ft.value ? "#15803d" : "#374151",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="funding_type"
+                    style={{ display: "none" }}
+                    checked={form.funding_type === ft.value}
+                    onChange={() => setForm({ ...form, funding_type: ft.value, funding_agency: "", external_amount: "" })}
+                  />
+                  {form.funding_type === ft.value && <Check size={13} color="#15803d" />}
+                  {ft.label}
+                </label>
+              ))}
+            </div>
+          </div>
+        </div>
 
+        {/* Row 2: Agency + Amount — only when External */}
+        {form.funding_type === "external" && (
+          <div className="cp-grid-2" style={{ marginTop: 12 }}>
+            <div className="cp-field">
+              <label className="cp-label">Funding Agency *</label>
+              <input
+                className="cp-input"
+                type="text"
+                placeholder="e.g. DOST, CHED"
+                value={form.funding_agency}
+                onChange={(e) => setForm({ ...form, funding_agency: e.target.value })}
+              />
+            </div>
+            <div className="cp-field">
+              <label className="cp-label">Amount from Agency</label>
+              <input
+                className="cp-input"
+                type="text"
+                placeholder="e.g. ₱500,000"
+                value={form.external_amount}
+                onChange={(e) => setForm({ ...form, external_amount: e.target.value })}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Row 3: Start + End Date */}
+        <div className="cp-grid-2" style={{ marginTop: 12 }}>
           <div className="cp-field">
             <label className="cp-label">Proposed Starting Date *</label>
             <input
@@ -1689,38 +1751,74 @@ function OverviewTab({
 
         <div className="cp-field">
           <label className="cp-label">Curriculum Vitae of Proponents *</label>
+          <p style={{ fontSize: 12, color: "#64748b", margin: "2px 0 10px" }}>
+            Upload one CV per proponent.{" "}
+            {form.proponents?.length > 0 && (
+              <span style={{ fontWeight: 700, color: (form.cv_files?.length || 0) === form.proponents.length ? "#15803d" : "#d97706" }}>
+                {form.cv_files?.length || 0} / {form.proponents.length} uploaded
+              </span>
+            )}
+          </p>
 
-          <div className="cp-file-row">
-            <button
-              type="button"
-              className="cp-file-btn"
-              onClick={() => document.getElementById("cv-upload").click()}
-            >
-              Choose Files
-            </button>
+          {/* List of added CVs with individual delete */}
+          {(form.cv_files?.length || 0) > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+              {Array.from(form.cv_files).map((file, i) => (
+                <div key={`${file.name}-${i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13 }}>
+                  <FileCheck size={14} color="#15803d" />
+                  <span style={{ flex: 1, color: "#111827", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const updated = Array.from(form.cv_files).filter((_, idx) => idx !== i);
+                      setForm((f) => ({ ...f, cv_files: updated }));
+                    }}
+                    title="Remove this CV"
+                    style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 6, cursor: "pointer", color: "#dc2626", padding: "2px 7px", flexShrink: 0, display: "flex", alignItems: "center", gap: 3, fontSize: 11, fontWeight: 600 }}
+                  >
+                    <Trash2 size={11} /> Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
-            <span className="cp-file-name">
-              {form.cv_files?.length > 0
-                ? `${form.cv_files.length} file(s) selected`
-                : existingFiles.cv_files
-                ? "Existing CV file(s) uploaded"
-                : "No file chosen"}
-            </span>
+          {existingFiles.cv_files && (form.cv_files?.length || 0) === 0 && (
+            <div style={{ padding: "7px 12px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: 8, fontSize: 13, color: "#15803d", marginBottom: 10 }}>
+              ✓ Previously uploaded CV file(s)
+            </div>
+          )}
 
-            <input
-              id="cv-upload"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx"
-              style={{ display: "none" }}
-              onChange={(e) =>
-                setForm({ ...form, cv_files: Array.from(e.target.files) })
-              }
-            />
-          </div>
+          {/* Under count warning */}
+          {form.proponents?.length > 0 && (form.cv_files?.length || 0) > 0 && (form.cv_files?.length || 0) < form.proponents.length && (
+            <div style={{ padding: "8px 12px", background: "#fef3c7", border: "1px solid #fcd34d", borderRadius: 8, fontSize: 13, color: "#92400e", marginBottom: 10 }}>
+              ⚠ Missing {form.proponents.length - form.cv_files.length} CV(s). Please make sure the number of CVs matches the number of proponents ({form.proponents.length}).
+            </div>
+          )}
 
-          <p className="cp-file-hint">Upload one CV per proponent</p>
-          <ExistingFileNote label="CV file(s)" path={existingFiles.cv_files} />
+          {/* Over count error */}
+          {form.proponents?.length > 0 && (form.cv_files?.length || 0) > form.proponents.length && (
+            <div style={{ padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8, fontSize: 13, color: "#dc2626", marginBottom: 10 }}>
+              ✗ Too many CVs uploaded ({form.cv_files.length} files for {form.proponents.length} proponent(s)). Please remove the extra CV(s).
+            </div>
+          )}
+
+          {/* Single button — supports both single and multiple selection */}
+          <button type="button" className="cp-file-btn"
+            onClick={() => document.getElementById("cv-upload-input").click()}>
+            <Plus size={13} /> Add CV(s)
+          </button>
+          <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 5 }}>
+            Click to add. Hold <strong>Ctrl</strong> (or <strong>Cmd</strong>) to select multiple at once.
+          </p>
+
+          <input id="cv-upload-input" type="file" multiple accept=".pdf,.doc,.docx" style={{ display: "none" }}
+            onChange={(e) => {
+              const files = Array.from(e.target.files);
+              if (files.length) setForm((f) => ({ ...f, cv_files: [...Array.from(f.cv_files || []), ...files] }));
+              e.target.value = "";
+            }}
+          />
         </div>
 
         <div className="cp-field" style={{ marginTop: 14 }}>
@@ -2185,7 +2283,7 @@ function OutputsTab({
         <span class="info-label">Category</span><span class="info-value">${form.category || "—"}</span>
         <span class="info-label">Lead Agency</span><span class="info-value">${form.lead_agency || "—"}</span>
         <span class="info-label">Site / Area</span><span class="info-value">${form.site_area || "—"}</span>
-        <span class="info-label">Total Budget</span><span class="info-value">${form.total_budget ? "₱" + Number(form.total_budget).toLocaleString() : "—"}</span>
+        <span class="info-label">Total Budget</span><span class="info-value">${form.total_budget || "—"}</span>
         <span class="info-label">Start Date</span><span class="info-value">${fmtDate(form.start_date)}</span>
         <span class="info-label">End Date</span><span class="info-value">${fmtDate(form.end_date)}</span>
         ${
@@ -2430,11 +2528,7 @@ function OutputsTab({
           <Row label="Site / Area" value={form.site_area} />
           <Row
             label="Total Proposed Budget"
-            value={
-              form.total_budget
-                ? `₱${Number(form.total_budget).toLocaleString()}`
-                : null
-            }
+            value={form.total_budget || null}
           />
           <Row label="Proposed Start Date" value={form.start_date} />
           <Row label="Proposed End Date" value={form.end_date} />
@@ -2819,6 +2913,9 @@ export default function Proposals() {
           lead_agency: project.lead_agency || proposal.lead_agency || "",
           site_area: project.site_area || proposal.site_area || "",
           total_budget: project.total_budget || project.budget || proposal.total_budget || "",
+          funding_type: project.funding_type || proposal.funding_type || "local",
+          funding_agency: project.funding_agency || proposal.funding_agency || "",
+          external_amount: project.external_amount || proposal.external_amount || "",
           start_date: project.start_date || proposal.start_date || "",
           end_date: project.end_date || proposal.end_date || "",
           proponents: loadedProponents,
@@ -2917,6 +3014,9 @@ export default function Proposals() {
       "lead_agency",
       "site_area",
       "total_budget",
+      "funding_type",
+      "funding_agency",
+      "external_amount",
       "start_date",
       "end_date",
       "similar_work_elsewhere",
@@ -2980,6 +3080,32 @@ export default function Proposals() {
   const handleSubmit = async () => {
     if (!allComplete) {
       setError(`Complete these sections first: ${incompleteTabs.join(", ")}.`);
+      return;
+    }
+
+    // CV count must match proponent count
+    const proponentCount = form.proponents?.length || 0;
+    const newCvCount = form.cv_files?.length || 0;
+
+    if (proponentCount > 0 && newCvCount > 0 && newCvCount < proponentCount) {
+      setError(
+        `CV count mismatch: You have ${proponentCount} proponent(s) but only ${newCvCount} CV file(s) uploaded. Please upload one CV per proponent.`
+      );
+      setActiveTab("Overview");
+      return;
+    }
+
+    if (proponentCount > 0 && newCvCount > proponentCount) {
+      setError(
+        `Too many CVs: You have ${newCvCount} CV file(s) but only ${proponentCount} proponent(s). Please remove the extra CV(s).`
+      );
+      setActiveTab("Overview");
+      return;
+    }
+
+    if (proponentCount > 0 && newCvCount === 0 && !existingFiles.cv_files) {
+      setError("Please upload a CV for each proponent before submitting.");
+      setActiveTab("Overview");
       return;
     }
 

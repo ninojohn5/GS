@@ -79,10 +79,10 @@ function App() {
         <Route path="/admin/reports"    element={<ProtectedRoute allowedRoles={["admin"]}><AdminReports /></ProtectedRoute>} />
         <Route path="/admin/profile"    element={<ProtectedRoute allowedRoles={["admin"]}><AdminProfile /></ProtectedRoute>} />
 
-        {/* APPROVER — RDE Chief, Campus Director, VPRIE, President */}
-        <Route path="/approver/dashboard" element={<ProtectedRoute allowedRoles={["rde_division_chief", "campus_director", "vprie", "president"]}><ApproverDashboard /></ProtectedRoute>} />
-        <Route path="/approver/approvals" element={<ProtectedRoute allowedRoles={["rde_division_chief", "campus_director", "vprie", "president"]}><ApproverPage /></ProtectedRoute>} />
-        <Route path="/approver/profile"   element={<ProtectedRoute allowedRoles={["rde_division_chief", "campus_director", "vprie", "president"]}><ApproverProfile /></ProtectedRoute>} />
+        {/* APPROVER — RDISO Director, VPRIE, President */}
+        <Route path="/approver/dashboard" element={<ProtectedRoute allowedRoles={["rdiso_director", "vprie", "president"]}><ApproverDashboard /></ProtectedRoute>} />
+        <Route path="/approver/approvals" element={<ProtectedRoute allowedRoles={["rdiso_director", "vprie", "president"]}><ApproverPage /></ProtectedRoute>} />
+        <Route path="/approver/profile"   element={<ProtectedRoute allowedRoles={["rdiso_director", "vprie", "president"]}><ApproverProfile /></ProtectedRoute>} />
 
         {/* DEFAULT */}
         <Route path="/" element={<Navigate to="/login" />} />

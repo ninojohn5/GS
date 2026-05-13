@@ -35,11 +35,13 @@ export default function TeamManagement() {
 
   useEffect(() => {
     if (!selectedProject) return;
-
     api
       .get(`/projects/${selectedProject}/team`)
       .then((res) => setMembers(res.data));
   }, [selectedProject]);
+
+  // Check if a Leader already exists in the team
+  const leaderExists = members.some((m) => m.role === "Leader");
 
   const getMemberDepartment = (m) => {
     return (
@@ -92,7 +94,6 @@ export default function TeamManagement() {
 
   const handleDelete = async (id) => {
     if (!confirm("Remove this team member?")) return;
-
     try {
       await api.delete(`/projects/${selectedProject}/team/${id}`);
       setMembers((prev) => prev.filter((m) => m.id !== id));
@@ -103,18 +104,14 @@ export default function TeamManagement() {
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
-
     setSearching(true);
     setSearchResults([]);
     setSelectedPerson(null);
-
     try {
       const res = await api.get(
         `/personnel/search?q=${encodeURIComponent(searchQuery)}`
       );
-
       setSearchResults(res.data);
-
       if (res.data.length === 0) {
         setError("No personnel found. Make sure the person has a registered account.");
       } else {
@@ -139,27 +136,33 @@ export default function TeamManagement() {
     setError("");
 
     if (editingMember) {
-      setLoading(true);
+      // Prevent assigning Leader if another Leader already exists
+      if (
+        form.role === "Leader" &&
+        editingMember.role !== "Leader" &&
+        leaderExists
+      ) {
+        setError("A project leader already exists. Only one leader is allowed per project.");
+        return;
+      }
 
+      setLoading(true);
       try {
         const res = await api.put(
           `/projects/${selectedProject}/team/${editingMember.id}`,
           { role: form.role }
         );
-
         setMembers((prev) =>
           prev.map((m) =>
             m.id === editingMember.id ? { ...m, role: res.data.role } : m
           )
         );
-
         setShowModal(false);
       } catch (err) {
         setError(err.response?.data?.message || "Failed to update role.");
       } finally {
         setLoading(false);
       }
-
       return;
     }
 
@@ -168,14 +171,18 @@ export default function TeamManagement() {
       return;
     }
 
-    setLoading(true);
+    // Prevent adding a second Leader
+    if (form.role === "Leader" && leaderExists) {
+      setError("A project leader already exists. Only one leader is allowed per project.");
+      return;
+    }
 
+    setLoading(true);
     try {
       await api.post(`/projects/${selectedProject}/team`, {
         personnel_id: form.personnel_id,
         role: form.role,
       });
-
       const teamRes = await api.get(`/projects/${selectedProject}/team`);
       setMembers(teamRes.data);
       setShowModal(false);
@@ -188,7 +195,6 @@ export default function TeamManagement() {
 
   const totalMembers = members.length;
   const projectLeaders = members.filter((m) => m.role === "Leader").length;
-
   const departments = new Set(
     members
       .map((m) => getMemberDepartment(m))
@@ -217,13 +223,7 @@ export default function TeamManagement() {
 
           {projects.length > 0 && (
             <div className="cp-section" style={{ marginBottom: 16 }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                }}
-              >
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                 <label
                   style={{
                     fontSize: 14,
@@ -247,7 +247,6 @@ export default function TeamManagement() {
                       </option>
                     ))}
                   </select>
-
                   <span className="cp-select-chevron">▾</span>
                 </div>
               </div>
@@ -292,7 +291,6 @@ export default function TeamManagement() {
                                 <circle cx="12" cy="7" r="4" />
                               </svg>
                             </div>
-
                             {m.name}
                           </div>
                         </td>
@@ -313,30 +311,19 @@ export default function TeamManagement() {
 
                         <td>
                           <div
-                            style={{
-                              display: "flex",
-                              flexDirection: "column",
-                              gap: 2,
-                            }}
+                            style={{ display: "flex", flexDirection: "column", gap: 2 }}
                           >
                             <span
                               style={{
                                 fontSize: 13,
-                                color:
-                                  department === "—" ? "#9ca3af" : "#374151",
+                                color: department === "—" ? "#9ca3af" : "#374151",
                                 fontWeight: department === "—" ? 400 : 600,
                               }}
                             >
                               {department}
                             </span>
-
                             {program && (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "#6b7280",
-                                }}
-                              >
+                              <span style={{ fontSize: 12, color: "#6b7280" }}>
                                 {program}
                               </span>
                             )}
@@ -360,7 +347,6 @@ export default function TeamManagement() {
                             <span className="edit" onClick={() => openEdit(m)}>
                               Edit
                             </span>
-
                             {m.role !== "Leader" && (
                               <Trash2
                                 size={16}
@@ -378,11 +364,7 @@ export default function TeamManagement() {
                     <tr>
                       <td
                         colSpan={5}
-                        style={{
-                          textAlign: "center",
-                          color: "#9ca3af",
-                          padding: 24,
-                        }}
+                        style={{ textAlign: "center", color: "#9ca3af", padding: 24 }}
                       >
                         No team members yet.
                       </td>
@@ -398,12 +380,10 @@ export default function TeamManagement() {
               <p className="tm-stat-num">{totalMembers}</p>
               <p className="tm-stat-label">Total Members</p>
             </div>
-
             <div className="tm-stat-card">
               <p className="tm-stat-num">{projectLeaders}</p>
               <p className="tm-stat-label">Project Leaders</p>
             </div>
-
             <div className="tm-stat-card">
               <p className="tm-stat-num">{departments}</p>
               <p className="tm-stat-label">Departments</p>
@@ -438,7 +418,6 @@ export default function TeamManagement() {
                       }}
                       onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                     />
-
                     <button
                       className="cp-btn primary"
                       style={{
@@ -449,13 +428,7 @@ export default function TeamManagement() {
                       onClick={handleSearch}
                       disabled={searching}
                     >
-                      {searching ? (
-                        "..."
-                      ) : (
-                        <>
-                          <Search size={14} /> Search
-                        </>
-                      )}
+                      {searching ? "..." : <><Search size={14} /> Search</>}
                     </button>
                   </div>
 
@@ -474,7 +447,6 @@ export default function TeamManagement() {
                       {searchResults.map((p) => {
                         const department = getPersonDepartment(p);
                         const program = getPersonProgram(p);
-
                         return (
                           <div
                             key={p.id}
@@ -485,41 +457,17 @@ export default function TeamManagement() {
                               borderBottom: "1px solid #f3f4f6",
                               fontSize: 13,
                             }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.background = "#f0fdf4")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.background = "#fff")
-                            }
+                            onMouseEnter={(e) => (e.currentTarget.style.background = "#f0fdf4")}
+                            onMouseLeave={(e) => (e.currentTarget.style.background = "#fff")}
                           >
-                            <div
-                              style={{
-                                fontWeight: 600,
-                                color: "#111827",
-                              }}
-                            >
+                            <div style={{ fontWeight: 600, color: "#111827" }}>
                               {p.name}
                             </div>
-
-                            <div
-                              style={{
-                                color: "#6b7280",
-                                fontSize: 12,
-                                marginTop: 2,
-                              }}
-                            >
+                            <div style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>
                               {p.email} · {p.role}
                             </div>
-
-                            <div
-                              style={{
-                                color: "#64748b",
-                                fontSize: 12,
-                                marginTop: 2,
-                              }}
-                            >
-                              {department}
-                              {program ? ` · ${program}` : ""}
+                            <div style={{ color: "#64748b", fontSize: 12, marginTop: 2 }}>
+                              {department}{program ? ` · ${program}` : ""}
                             </div>
                           </div>
                         );
@@ -542,16 +490,12 @@ export default function TeamManagement() {
                     <div style={{ fontWeight: 600, color: "#15803d" }}>
                       ✓ Selected: {selectedPerson.name}
                     </div>
-
                     <div style={{ color: "#6b7280", marginTop: 2 }}>
                       {selectedPerson.email}
                     </div>
-
                     <div style={{ color: "#64748b", marginTop: 2 }}>
                       {getPersonDepartment(selectedPerson)}
-                      {getPersonProgram(selectedPerson)
-                        ? ` · ${getPersonProgram(selectedPerson)}`
-                        : ""}
+                      {getPersonProgram(selectedPerson) ? ` · ${getPersonProgram(selectedPerson)}` : ""}
                     </div>
                   </div>
                 )}
@@ -572,16 +516,12 @@ export default function TeamManagement() {
                 <div style={{ fontWeight: 600, color: "#111827" }}>
                   {editingMember.name}
                 </div>
-
                 <div style={{ color: "#6b7280", marginTop: 2 }}>
                   {editingMember.email}
                 </div>
-
                 <div style={{ color: "#64748b", marginTop: 2 }}>
                   {getMemberDepartment(editingMember)}
-                  {getMemberProgram(editingMember)
-                    ? ` · ${getMemberProgram(editingMember)}`
-                    : ""}
+                  {getMemberProgram(editingMember) ? ` · ${getMemberProgram(editingMember)}` : ""}
                 </div>
               </div>
             )}
@@ -589,29 +529,32 @@ export default function TeamManagement() {
             <div className="cp-field" style={{ marginBottom: 16 }}>
               <label className="cp-label">Role *</label>
 
+              {/* Show warning if Leader already exists */}
+              {leaderExists && editingMember?.role !== "Leader" && (
+                <p style={{ fontSize: 12, color: "#92400e", background: "#fffbeb", border: "1px solid #fcd34d", borderRadius: 6, padding: "6px 10px", marginBottom: 8 }}>
+                  ⚠ A project leader already exists. You can only assign Co-Leader or Member.
+                </p>
+              )}
+
               <div className="cp-select-wrap">
                 <select
                   className="cp-select"
                   value={form.role}
                   onChange={(e) => setForm({ ...form, role: e.target.value })}
                 >
-                  <option value="Leader">Leader</option>
+                  {/* Hide Leader option if one already exists (unless editing the current leader) */}
+                  {(!leaderExists || editingMember?.role === "Leader") && (
+                    <option value="Leader">Leader</option>
+                  )}
                   <option value="Co-Leader">Co-Leader</option>
                   <option value="Member">Member</option>
                 </select>
-
                 <span className="cp-select-chevron">▾</span>
               </div>
             </div>
 
             {error && (
-              <p
-                style={{
-                  color: "#dc2626",
-                  fontSize: 13,
-                  marginBottom: 12,
-                }}
-              >
+              <p style={{ color: "#dc2626", fontSize: 13, marginBottom: 12 }}>
                 {error}
               </p>
             )}
@@ -620,21 +563,13 @@ export default function TeamManagement() {
               <button className="cp-btn" onClick={() => setShowModal(false)}>
                 Cancel
               </button>
-
               <button
                 className="cp-btn primary"
-                style={{
-                  background: "#1f7a1f",
-                  borderColor: "#1f7a1f",
-                }}
+                style={{ background: "#1f7a1f", borderColor: "#1f7a1f" }}
                 onClick={handleSave}
                 disabled={loading || (!editingMember && !form.personnel_id)}
               >
-                {loading
-                  ? "Saving..."
-                  : editingMember
-                  ? "Save Changes"
-                  : "Add Member"}
+                {loading ? "Saving..." : editingMember ? "Save Changes" : "Add Member"}
               </button>
             </div>
           </div>

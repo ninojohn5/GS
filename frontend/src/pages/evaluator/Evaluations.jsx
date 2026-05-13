@@ -267,6 +267,7 @@ export default function Evaluations() {
   const [viewItem,  setViewItem]  = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error,     setError]     = useState("");
+  const [projectDocs, setProjectDocs] = useState([]);
 
   const [scores, setScores] = useState({
     presentation_score: 0, relevance_discipline_score: 0,
@@ -317,6 +318,21 @@ export default function Evaluations() {
     setSelected(proj);
     setScores({ presentation_score: 0, relevance_discipline_score: 0, relevance_rde_score: 0, potential_benefits_score: 0 });
     setComments(""); setError(""); clearCanvas(); setSigFile(null); setSigTab("draw");
+
+    // Fetch documents for the selected project
+    setProjectDocs([]);
+    api.get(`/projects/${proj.id}`).then((res) => {
+      const p = res.data || {};
+      const base = window.location.origin;
+      const toUrl = (path) => path ? `${base}/storage/${path}` : null;
+      setProjectDocs([
+        { label: "Proposal Form", url: toUrl(p.proposal_form_path || p.proposal_form) },
+        { label: "CV(s)",         url: toUrl(Array.isArray(p.cv_paths) ? p.cv_paths[0] : p.cv_paths || p.cv_files) },
+        { label: "Work Plan",     url: toUrl(p.work_plan_path || p.work_plan_file) },
+        { label: "Framework",     url: toUrl(p.framework_path || p.framework_file) },
+        { label: "References",    url: toUrl(p.references_path || p.references_file) },
+      ].filter((d) => d.url));
+    }).catch(() => setProjectDocs([]));
   };
 
   const getSignatureImage = () => {
@@ -412,6 +428,24 @@ export default function Evaluations() {
                     <h3 style={{ fontSize: 16, fontWeight: 700, color: "#111827", margin: "0 0 4px" }}>{selected.title}</h3>
                     <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>{selected.dept}</p>
                   </div>
+
+                  {/* Documents */}
+                  {projectDocs.length > 0 && (
+                    <div style={{ marginBottom: 20 }}>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 8 }}>📎 Submitted Documents</p>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {projectDocs.map((doc) => (
+                          <a key={doc.label} href={doc.url} target="_blank" rel="noopener noreferrer"
+                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#1d4ed8", fontSize: 13, fontWeight: 500, textDecoration: "none" }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "#f9fafb"}
+                          >
+                            <FileText size={14} color="#1d4ed8" /> {doc.label}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {error && <div className="auth-error" style={{ marginBottom: 16 }}>{error}</div>}
 
