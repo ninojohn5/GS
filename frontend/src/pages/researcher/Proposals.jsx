@@ -2855,6 +2855,7 @@ export default function Proposals() {
   const [submitting, setSubmitting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingDraft, setLoadingDraft] = useState(false);
+  const [projectStatus, setProjectStatus] = useState("");
   const [success, setSuccess] = useState("");
   const [error, setError] = useState("");
 
@@ -2881,6 +2882,7 @@ export default function Proposals() {
       .then((res) => {
         const project = res.data?.project || res.data || {};
         const proposal = res.data?.proposal || {};
+        setProjectStatus(project.status || "");
         const parsedPastWorks = normalizeJsonArray(proposal.past_works);
         const parsedPreferredEvaluatorIds = normalizeIdArray(
           proposal.preferred_evaluators
@@ -3232,6 +3234,21 @@ export default function Proposals() {
             </div>
           )}
 
+          {projectStatus === "For Revision" && (
+            <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 10,
+              padding: "12px 16px", marginBottom: 16, display: "flex", alignItems: "flex-start", gap: 10 }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>⚠️</span>
+              <div>
+                <p style={{ margin: "0 0 3px", fontSize: 14, fontWeight: 700, color: "#92400e" }}>
+                  This proposal was returned for revision
+                </p>
+                <p style={{ margin: 0, fontSize: 13, color: "#a16207" }}>
+                  Review the approver remarks, make changes, then click <strong>Resubmit Proposal</strong>.
+                </p>
+              </div>
+            </div>
+          )}
+
           {error && (
             <div
               style={{
@@ -3482,8 +3499,8 @@ export default function Proposals() {
                   type="button"
                   className="cp-btn primary"
                   style={{
-                    background: allComplete ? "#1f7a1f" : "#9ca3af",
-                    borderColor: allComplete ? "#1f7a1f" : "#9ca3af",
+                    background: allComplete ? (projectStatus === "For Revision" ? "#d97706" : "#1f7a1f") : "#9ca3af",
+                    borderColor: allComplete ? (projectStatus === "For Revision" ? "#d97706" : "#1f7a1f") : "#9ca3af",
                     display: "flex",
                     alignItems: "center",
                     gap: 7,
@@ -3493,7 +3510,7 @@ export default function Proposals() {
                   disabled={submitting || !allComplete || loadingDraft}
                 >
                   <Send size={14} />
-                  {submitting ? "Submitting..." : "Submit Proposal"}
+                  {submitting ? "Submitting..." : projectStatus === "For Revision" ? "Resubmit Proposal" : "Submit Proposal"}
                 </button>
               </div>
             </div>
@@ -3513,8 +3530,8 @@ export default function Proposals() {
                 type="button"
                 className="cp-btn primary"
                 style={{
-                  background: allComplete ? "#1f7a1f" : "#9ca3af",
-                  borderColor: allComplete ? "#1f7a1f" : "#9ca3af",
+                  background: allComplete ? (projectStatus === "For Revision" ? "#d97706" : "#1f7a1f") : "#9ca3af",
+                  borderColor: allComplete ? (projectStatus === "For Revision" ? "#d97706" : "#1f7a1f") : "#9ca3af",
                   display: "flex",
                   alignItems: "center",
                   gap: 7,
@@ -3524,7 +3541,7 @@ export default function Proposals() {
                 disabled={submitting || !allComplete || loadingDraft}
               >
                 <Send size={14} />
-                {submitting ? "Submitting..." : "Submit Proposal"}
+                {submitting ? "Submitting..." : projectStatus === "For Revision" ? "Resubmit Proposal" : "Submit Proposal"}
               </button>
             </div>
           )}

@@ -37,11 +37,11 @@ class EvaluationController extends Controller
         $pendingIds = $assignedProjectIds->diff($evaluatedProjectIds)->values();
 
         $projects = ResearchProject::whereIn('id', $pendingIds)
-            ->whereIn('status', [
-                'Presentation Scheduled',
-                'Scheduled',
-                'Under Evaluation',
-            ])
+        ->whereIn('status', [
+            'Presentation Scheduled',
+            'Scheduled',
+            'Under Evaluation',
+        ])
             ->with([
                 'departmentCenter',
                 'creator',
@@ -125,6 +125,15 @@ class EvaluationController extends Controller
         if ($alreadyEvaluated) {
             return response()->json([
                 'message' => 'You have already evaluated this proposal.',
+            ], 422);
+        }
+
+        // Block evaluation if presentation has not been scheduled yet
+        $project = ResearchProject::findOrFail($projectId);
+        $allowedStatuses = ['Presentation Scheduled', 'Scheduled', 'Under Evaluation'];
+        if (!in_array($project->status, $allowedStatuses, true)) {
+            return response()->json([
+                'message' => 'This proposal is not ready for evaluation. The presentation must be scheduled first.',
             ], 422);
         }
 
@@ -226,22 +235,23 @@ class EvaluationController extends Controller
                     'research_project_id' => $project->id,
                     'status'              => 'Evaluated',
                     'changed_by'          => $request->user()->id,
-                    'remarks'             => 'All evaluator reviews completed. Forwarded to RDE Division Chief.',
+                    'remarks'             => 'All evaluator reviews completed. Forwarded to RDISO Director / ESO Director.',
                 ]);
-            } elseif (in_array($project->status, ['Presentation Scheduled', 'Scheduled'], true)) {
+            } else {
+                // Log every evaluator submission so the timeline shows all evaluators
                 ProposalStatusHistory::create([
                     'research_project_id' => $project->id,
                     'status'              => 'Under Evaluation',
                     'changed_by'          => $request->user()->id,
-                    'remarks'             => 'Evaluator review started.',
+                    'remarks'             => 'Evaluation submitted by ' . $request->user()->name . '.',
                 ]);
             }
         });
 
         return response()->json([
-            'message'    => $project?->status === 'Evaluated'
-                ? 'Evaluation submitted. All evaluators are done. Proposal forwarded to RDE Division Chief.'
-                : 'Evaluation submitted successfully.',
+        'message' => $project?->status === 'Evaluated'
+            ? 'Evaluation submitted. All evaluators are done. Proposal forwarded to RDISO Director / ESO Director.'
+            : 'Evaluation submitted successfully.',
             'evaluation' => $evaluation,
             'project'    => $project?->fresh(),
         ], 201);

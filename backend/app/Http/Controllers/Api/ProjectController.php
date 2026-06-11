@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ResearchProject;
 use App\Models\Personnel;
+use App\Models\ProposalStatusHistory;
 use Illuminate\Http\Request;
 
 class ProjectController extends Controller
@@ -16,7 +17,14 @@ class ProjectController extends Controller
         $showArchived = $request->boolean('archived');
 
         if ($user->role === 'researcher') {
-            $projects = ResearchProject::where('created_by', $user->id)
+            $projects = ResearchProject::where(function ($query) use ($user) {
+                    // Projects the researcher created
+                    $query->where('created_by', $user->id)
+                        // OR projects where they are a proponent/team member
+                        ->orWhereHas('proponents', function ($q) use ($user) {
+                            $q->where('personnel_id', $user->id);
+                        });
+                })
                 ->when($showArchived, function ($query) {
                     $query->where('is_archived', true);
                 })
@@ -121,8 +129,13 @@ class ProjectController extends Controller
 
         $user = $request->user();
 
-        if ($user->role === 'researcher' && (int) $project->created_by !== (int) $user->id) {
-            return response()->json(['message' => 'Unauthorized.'], 403);
+        if ($user->role === 'researcher') {
+            $isCreator    = (int) $project->created_by === (int) $user->id;
+            $isProponent  = $project->proponents->contains('personnel_id', $user->id);
+
+            if (!$isCreator && !$isProponent) {
+                return response()->json(['message' => 'Unauthorized.'], 403);
+            }
         }
 
         $preferredEvaluatorIds = [];
@@ -221,6 +234,13 @@ class ProjectController extends Controller
         $project->update([
             'status'      => 'Submitted',
             'is_archived' => false,
+        ]);
+
+        ProposalStatusHistory::create([
+            'research_project_id' => $project->id,
+            'status'              => 'Submitted',
+            'changed_by'          => $request->user()->id,
+            'remarks'             => 'Proposal submitted by researcher.',
         ]);
 
         return response()->json([

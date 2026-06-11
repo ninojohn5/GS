@@ -32,17 +32,15 @@ class Approval extends Model
     |--------------------------------------------------------------------------
     */
     public const SEQUENCE_ROLES = [
-        1 => 'rde_division_chief',
-        2 => 'campus_director',
-        3 => 'vprie',
-        4 => 'president',
+        1 => 'rdiso_director',
+        2 => 'vprie',
+        3 => 'president',
     ];
 
     public const SEQUENCE_LABELS = [
-        1 => 'Division Chief for RDIE',
-        2 => 'Campus Director',
-        3 => 'Vice President for RIES',
-        4 => 'University President',
+        1 => 'RDISO Director / ESO Director',
+        2 => 'Vice President for Research, Innovation and Extension',
+        3 => 'University President',
     ];
 
     /*

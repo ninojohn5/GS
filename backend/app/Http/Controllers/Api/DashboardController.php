@@ -13,6 +13,22 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    /**
+     * Safely parse a budget value that may be a string like "10000/to be determined".
+     * Returns the numeric portion if found, or 0.
+     */
+    private function parseBudget($value): float
+    {
+        if (!$value) return 0;
+        // Extract first number from string (handles "10000/note", "₱10,000", etc.)
+        $clean = preg_replace('/[^\d.]/', '', explode('/', (string) $value)[0]);
+        return (float) $clean;
+    }
+
+    private function sumBudgets($collection): float
+    {
+        return $collection->sum(fn($p) => $this->parseBudget($p->budget));
+    }
     // GET /api/dashboard/stats
     public function stats(Request $request)
     {
@@ -64,7 +80,7 @@ class DashboardController extends Controller
             'draft'            => $statusCounts->get('Draft', 0),
             'for_revision'     => $statusCounts->get('For Revision', 0),
             'rejected'         => $statusCounts->get('Rejected', 0),
-            'total_budget'     => $projects->sum('budget'),
+            'total_budget'     => $this->sumBudgets($projects),
             'local_count'      => $projects->where('funding_type', 'local')->count() + $projects->whereNull('funding_type')->count(),
             'external_count'   => $projects->where('funding_type', 'external')->count(),
             'status_counts'    => $statusCounts,
@@ -82,10 +98,14 @@ class DashboardController extends Controller
                 'oral_presentation_evaluators.oral_presentation_id'
             )
             ->where('oral_presentation_evaluators.evaluator_id', $user->id)
-            ->pluck('oral_presentations.research_project_id');
+            ->pluck('oral_presentations.research_project_id')
+            ->unique()
+            ->values();
 
         $evaluatedIds = Evaluation::where('evaluator_id', $user->id)
-            ->pluck('research_project_id');
+            ->pluck('research_project_id')
+            ->unique()
+            ->values();
 
         $pendingCount = $assignedProjectIds->diff($evaluatedIds)->count();
 
@@ -93,25 +113,15 @@ class DashboardController extends Controller
 
         $avgScore = $evaluations->avg('total_score');
 
-        $visibleProjects = ResearchProject::whereIn('status', [
-            'Submitted',
-            'Presentation Scheduled',
-            'Under Evaluation',
-            'Evaluated',
-            'Endorsed',
-            'Recommended',
-            'Forwarded',
-            'Approved',
-            'Rejected',
-            'For Revision',
-        ])->get();
+        // Only count projects this evaluator is actually assigned to
+        $assignedProjects = ResearchProject::whereIn('id', $assignedProjectIds)->get();
 
-        $statusCounts = $visibleProjects->groupBy('status')->map->count();
+        $statusCounts = $assignedProjects->groupBy('status')->map->count();
 
         return response()->json([
             'awaiting_evaluation' => $pendingCount,
             'evaluated'           => $evaluations->count(),
-            'total_proposals'     => $visibleProjects->count(),
+            'total_proposals'     => $assignedProjectIds->count(), // only assigned ones
             'avg_score'           => round($avgScore ?? 0, 1),
             'status_counts'       => $statusCounts,
         ]);
@@ -231,7 +241,7 @@ class DashboardController extends Controller
             ->map(function ($items, $department) {
                 return [
                     'department'   => $department,
-                    'total_budget' => $items->sum('budget'),
+                    'total_budget' => $this->sumBudgets($items),
                     'count'        => $items->count(),
                 ];
             })
@@ -262,11 +272,6 @@ class DashboardController extends Controller
 
     private function adminStats()
     {
-        /*
-        |--------------------------------------------------------------------------
-        | Admin should not see drafts
-        |--------------------------------------------------------------------------
-        */
         $visibleProjects = ResearchProject::whereIn('status', [
             'Submitted',
             'Presentation Scheduled',
@@ -278,15 +283,29 @@ class DashboardController extends Controller
             'Approved',
             'Rejected',
             'For Revision',
-        ])->get();
+        ])->with('departmentCenter')->get();
 
         $statusCounts = $visibleProjects->groupBy('status')->map->count();
 
-        $totalFaculty = Personnel::where('role', 'researcher')->count();
-
+        $totalFaculty    = Personnel::where('role', 'researcher')->count();
         $totalEvaluators = Personnel::where('role', 'evaluator')->count();
+        $systemUsers     = Personnel::count();
 
-        $systemUsers = Personnel::count();
+        // Build byDepartment from actual projects
+        $byDepartment = $visibleProjects
+            ->groupBy(function ($project) {
+                return $project->departmentCenter?->name
+                    ?? $project->department
+                    ?? 'Unassigned';
+            })
+            ->map(function ($items, $department) {
+                return [
+                    'department'   => $department,
+                    'total_budget' => $this->sumBudgets($items),
+                    'count'        => $items->count(),
+                ];
+            })
+            ->values();
 
         return response()->json([
             'total_faculty'    => $totalFaculty,
@@ -295,24 +314,26 @@ class DashboardController extends Controller
             'system_users'     => $systemUsers,
 
             'total_projects'   => $visibleProjects->count(),
-            'total_budget'     => $visibleProjects->sum('budget'),
+            'total_budget'     => $this->sumBudgets($visibleProjects),
 
-            'local_count'      => $visibleProjects->where('funding_type', 'local')->count() + $visibleProjects->whereNull('funding_type')->count(),
-            'external_count'   => $visibleProjects->where('funding_type', 'external')->count(),
+            'local_count'    => $visibleProjects->where('funding_type', 'local')->count()
+                              + $visibleProjects->whereNull('funding_type')->count(),
+            'external_count' => $visibleProjects->where('funding_type', 'external')->count(),
 
             'byStatus' => [
-                'approved'         => $statusCounts->get('Approved', 0),
-                'in_progress'      => $statusCounts->get('In Progress', 0),
-                'submitted'        => $statusCounts->get('Submitted', 0),
-                'draft'            => 0,
-                'under_evaluation' => $statusCounts->get('Under Evaluation', 0),
-                'for_revision'     => $statusCounts->get('For Revision', 0),
-                'rejected'         => $statusCounts->get('Rejected', 0),
+                'approved'                 => $statusCounts->get('Approved', 0),
+                'submitted'                => $statusCounts->get('Submitted', 0),
+                'presentation_scheduled'   => $statusCounts->get('Presentation Scheduled', 0),
+                'under_evaluation'         => $statusCounts->get('Under Evaluation', 0),
+                'evaluated'                => $statusCounts->get('Evaluated', 0),
+                'endorsed'                 => $statusCounts->get('Endorsed', 0),
+                'recommended'              => $statusCounts->get('Recommended', 0),
+                'for_revision'             => $statusCounts->get('For Revision', 0),
+                'rejected'                 => $statusCounts->get('Rejected', 0),
             ],
 
             'status_counts' => $statusCounts,
-
-            'byDepartment' => [],
+            'byDepartment'  => $byDepartment,
         ]);
     }
-}   
+}

@@ -53,7 +53,6 @@ function App() {
         {/* AUTH */}
         <Route path="/login"  element={<Login />} />
         <Route path="/signup" element={<SignUp />} />
-        <Route path="/profile" element={<Profile />} />
 
         {/* RESEARCHER */}
         <Route path="/researcher/dashboard" element={<ProtectedRoute allowedRoles={["researcher"]}><Dashboard /></ProtectedRoute>} />
@@ -64,6 +63,7 @@ function App() {
         <Route path="/researcher/outputs"   element={<ProtectedRoute allowedRoles={["researcher"]}><Outputs /></ProtectedRoute>} />
         <Route path="/researcher/outputs/:id" element={<ProtectedRoute allowedRoles={["researcher"]}><OutputsDetail /></ProtectedRoute>} />
         <Route path="/researcher/status-tracking" element={<ProtectedRoute allowedRoles={["researcher"]}><StatusTracking /></ProtectedRoute>} />
+        <Route path="/researcher/profile"   element={<ProtectedRoute allowedRoles={["researcher"]}><Profile /></ProtectedRoute>} />
 
         {/* EVALUATOR */}
         <Route path="/evaluator/dashboard"       element={<ProtectedRoute allowedRoles={["evaluator"]}><EvaluatorDashboard /></ProtectedRoute>} />

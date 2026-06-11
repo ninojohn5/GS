@@ -30,6 +30,11 @@ class Personnel extends Authenticatable
         'department',
         'position',
         'program',
+        'rank',
+        'expertise',
+        'gender',
+        'contact_number',
+        'join_date',
         'is_active',
     ];
 
@@ -47,40 +52,13 @@ class Personnel extends Authenticatable
 
     // ── Role helpers ──────────────────────────────────────────────────────────
 
-    public function isResearcher(): bool
-    {
-        return $this->role === 'researcher';
-    }
-
-    public function isEvaluator(): bool
-    {
-        return $this->role === 'evaluator';
-    }
-
-    public function isRdeDivisionChief(): bool
-    {
-        return $this->role === 'rde_division_chief';
-    }
-
-    public function isCampusDirector(): bool
-    {
-        return $this->role === 'campus_director';
-    }
-
-    public function isVprie(): bool
-    {
-        return $this->role === 'vprie';
-    }
-
-    public function isPresident(): bool
-    {
-        return $this->role === 'president';
-    }
-
-    public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
-    }
+    public function isResearcher(): bool { return $this->role === 'researcher'; }
+    public function isEvaluator(): bool { return $this->role === 'evaluator'; }
+    public function isRdisoDirector(): bool { return $this->role === 'rdiso_director'; }
+    public function isVprie(): bool { return $this->role === 'vprie'; }
+    public function isPresident(): bool { return $this->role === 'president'; }
+    public function isAdmin(): bool { return $this->role === 'admin'; }
+    public function isApprover(): bool { return in_array($this->role, ['rdiso_director', 'vprie', 'president']); }
 
     // ── Relationships ─────────────────────────────────────────────────────────
 

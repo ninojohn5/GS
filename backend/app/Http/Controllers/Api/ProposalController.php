@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ResearchProject;
 use App\Models\Proposal;
+use App\Models\ProposalStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -345,6 +346,21 @@ class ProposalController extends Controller
 
             $this->syncProponents($project->id, $data['proponents'] ?? null, $cvPaths);
 
+            // Log status history for Submitted (not Draft)
+            if ($status === 'Submitted') {
+                $wasRevision = isset($project->id) &&
+                    ResearchProject::find($project->id)?->getOriginal('status') === 'For Revision';
+
+                ProposalStatusHistory::create([
+                    'research_project_id' => $project->id,
+                    'status'              => 'Submitted',
+                    'changed_by'          => $request->user()->id,
+                    'remarks'             => $wasRevision
+                        ? 'Proposal resubmitted by researcher after revision.'
+                        : 'Proposal submitted by researcher.',
+                ]);
+            }
+
             return $project->fresh();
         });
     }
@@ -356,14 +372,15 @@ class ProposalController extends Controller
                 ->findOrFail($request->input('project_id'));
         }
 
-        $existingDraft = ResearchProject::where('created_by', $request->user()->id)
-            ->where('status', 'Draft')
+        // Look for existing Draft OR For Revision project with same title
+        $existingProject = ResearchProject::where('created_by', $request->user()->id)
+            ->whereIn('status', ['Draft', 'For Revision'])
             ->where('title', $data['title'])
             ->latest()
             ->first();
 
-        if ($existingDraft) {
-            return $existingDraft;
+        if ($existingProject) {
+            return $existingProject;
         }
 
         $project = new ResearchProject();

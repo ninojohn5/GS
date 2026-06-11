@@ -30,7 +30,9 @@ class OutputController extends Controller
                         'file_path' => $output->file_path,
                         'file_name' => $output->file_name,
                         'file_type' => $output->file_type,
-                        'file_url' => $output->file_path ? asset('storage/' . $output->file_path) : null,
+                        'file_url' => $output->file_path
+                            ? rtrim(config('app.url'), '/') . '/storage/' . $output->file_path
+                            : null,
                         'created_at' => $output->created_at,
                         'updated_at' => $output->updated_at,
                     ];

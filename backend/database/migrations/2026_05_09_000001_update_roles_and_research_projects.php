@@ -2,7 +2,6 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -10,30 +9,14 @@ return new class extends Migration
     public function up(): void
     {
         // ----------------------------------------------------------------
-        // 1. Rename old roles in personnel table
-        // ----------------------------------------------------------------
-        // SQLite enforces CHECK constraints — disable it temporarily
-        DB::statement('PRAGMA ignore_check_constraints = 1;');
-
-        DB::table('personnel')
-            ->where('role', 'rde_division_chief')
-            ->update(['role' => 'rdiso_director']);
-
-        DB::table('personnel')
-            ->where('role', 'campus_director')
-            ->update(['role' => 'rdiso_director']);
-
-        DB::statement('PRAGMA ignore_check_constraints = 0;');
-
-        // ----------------------------------------------------------------
-        // 2. Change budget column from numeric to string in research_projects
+        // 1. budget column from numeric to string in research_projects
         // ----------------------------------------------------------------
         Schema::table('research_projects', function (Blueprint $table) {
             $table->string('budget', 255)->nullable()->change();
         });
 
         // ----------------------------------------------------------------
-        // 3. Add funding_type, funding_agency, external_amount columns
+        // 2. Add funding_type, funding_agency, external_amount columns
         // ----------------------------------------------------------------
         Schema::table('research_projects', function (Blueprint $table) {
             if (!Schema::hasColumn('research_projects', 'funding_type')) {

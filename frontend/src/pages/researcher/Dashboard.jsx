@@ -20,6 +20,7 @@ import {
   User,
   FileText,
   CheckCircle2,
+  ClipboardList,
   Receipt,
   ArrowRight,
   Clock,
@@ -66,15 +67,32 @@ const normalizeStatus = (status) => {
   return status;
 };
 
-const fmtCurrency = (n) => `₱${Number(n || 0).toLocaleString()}`;
+// CHANGED: handles pure numbers AND raw strings
+// "2222" → ₱2,222 | "250,000" → ₱250,000 | "to be determined" → to be determined | null → —
+const fmtCurrency = (raw) => {
+  if (!raw && raw !== 0) return "—";
+  const str = String(raw).trim();
+  if (!str || str === "0") return "—";
+  const cleaned = str.replace(/[₱,\s]/g, "");
+  const num = parseFloat(cleaned);
+  if (!isNaN(num) && cleaned.replace(/[\d.]/g, "") === "") {
+    return `₱${num.toLocaleString()}`;
+  }
+  return str;
+};
+
+// For stat card total — smart K/M suffix
+const fmtTotalBudget = (n) => {
+  if (!n || n === 0) return "₱0";
+  if (n >= 1_000_000) return `₱${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `₱${(n / 1_000).toFixed(1)}K`;
+  return `₱${n.toLocaleString()}`;
+};
 
 const fmtDate = (value) => {
   if (!value) return "—";
-
   const d = new Date(value);
-
   if (Number.isNaN(d.getTime())) return value;
-
   return d.toLocaleDateString("en-PH", {
     year: "numeric",
     month: "short",
@@ -87,8 +105,17 @@ const pct = (n, t) => (t ? Math.round((n / t) * 100) : 0);
 const getProjectId = (p) =>
   p.reference_no || p.project_id || p.proposal_id || `PRJ-${p.id}`;
 
-const getBudget = (p) =>
-  Number(p.budget || p.total_budget || p.proposal?.total_budget || 0);
+// CHANGED: returns raw budget string (not parsed to number)
+const getRawBudget = (p) =>
+  p.budget || p.total_budget || p.proposal?.total_budget || null;
+
+// Numeric budget for totals/charts only
+const getNumericBudget = (p) => {
+  const raw = getRawBudget(p);
+  if (!raw) return 0;
+  const num = parseFloat(String(raw).replace(/[^\d.]/g, ""));
+  return isNaN(num) ? 0 : num;
+};
 
 const getDepartment = (p) =>
   p.department_center?.name ||
@@ -259,7 +286,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [stats, setStats] = useState(null);
-  const [budgetData, setBudgetData] = useState([]);
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -268,25 +294,13 @@ export default function Dashboard() {
 
     Promise.allSettled([
       api.get("/dashboard/stats"),
-      api.get("/dashboard/budget-by-department"),
-      api.get("/researcher/projects"),
+      api.get("/projects"),
     ])
-      .then(([statsRes, budgetRes, projectsRes]) => {
+      .then(([statsRes, projectsRes]) => {
         const statsData =
           statsRes.status === "fulfilled" ? statsRes.value.data || null : null;
 
         setStats(statsData);
-
-        if (statsData?.by_department?.length) {
-          setBudgetData(statsData.by_department);
-        } else if (
-          budgetRes.status === "fulfilled" &&
-          Array.isArray(budgetRes.value.data)
-        ) {
-          setBudgetData(budgetRes.value.data);
-        } else {
-          setBudgetData([]);
-        }
 
         if (
           projectsRes.status === "fulfilled" &&
@@ -319,13 +333,15 @@ export default function Dashboard() {
     .map(([name, value]) => ({ name, value: Number(value || 0) }))
     .filter((d) => d.value > 0);
 
-  const barData = budgetData
-    .map((d) => ({
-      dept: d.department || d.dept || "Unassigned",
-      budget: Math.round(Number(d.total_budget || d.budget || 0) / 1000),
-      count: Number(d.count || d.projects || d.proposals || 0),
-    }))
-    .filter((d) => d.budget > 0 || d.count > 0);
+  // CHANGED: build barData from actual projects grouped by dept — always has data
+  const deptMap = projects.reduce((acc, p) => {
+    const dept = getDepartment(p);
+    if (!acc[dept]) acc[dept] = { dept, count: 0, budget: 0 };
+    acc[dept].count  += 1;
+    acc[dept].budget += getNumericBudget(p);
+    return acc;
+  }, {});
+  const barData = Object.values(deptMap).filter((d) => d.count > 0);
 
   const myProjects = Number(stats?.my_projects ?? projects.length ?? 0);
 
@@ -363,9 +379,9 @@ export default function Dashboard() {
       ).length
   );
 
-  const totalBudget = Number(
-    stats?.total_budget ?? projects.reduce((sum, p) => sum + getBudget(p), 0)
-  );
+  // CHANGED: sum only numeric budgets from current projects list
+  // automatically reduces when a project is archived/deleted since projects list updates
+  const totalBudget = projects.reduce((sum, p) => sum + getNumericBudget(p), 0);
 
   const approvalRate = pct(approved, myProjects);
 
@@ -596,7 +612,7 @@ export default function Dashboard() {
                   flexShrink: 0,
                 }}
               >
-                Create proposal <PlusCircle size={15} />
+                Create proposal<PlusCircle size={15} />
               </button>
             </div>
 
@@ -636,14 +652,15 @@ export default function Dashboard() {
                 sub={`${approvalRate}% approval rate`}
               />
 
+              {/* CHANGED: uses fmtTotalBudget with numeric-only sum */}
               <StatCard
                 icon={Receipt}
                 iconColor="#7c3aed"
                 iconBg="#f5f3ff"
                 accentColor="#7c3aed"
                 label="Total Budget"
-                value={loading ? "—" : fmtCurrency(totalBudget)}
-                sub="Across your proposals"
+                value={loading ? "—" : fmtTotalBudget(totalBudget)}
+                sub="Sum of numeric budgets"
               />
             </div>
 
@@ -745,8 +762,9 @@ export default function Dashboard() {
 
                             <td>{getDepartment(p)}</td>
 
+                            {/* CHANGED: show raw budget string */}
                             <td style={{ whiteSpace: "nowrap" }}>
-                              {fmtCurrency(getBudget(p))}
+                              {fmtCurrency(getRawBudget(p))}
                             </td>
 
                             <td>
@@ -911,20 +929,12 @@ export default function Dashboard() {
                   style={{ margin: "0 auto 12px", display: "block" }}
                 />
 
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: "#374151",
-                  }}
-                >
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#374151" }}>
                   No chart data yet
                 </p>
 
                 <p style={{ margin: "6px 0 0", fontSize: 13, color: "#9ca3af" }}>
-                  Charts will appear once you submit proposals and budget data is
-                  available.
+                  Charts will appear once you submit proposals and budget data is available.
                 </p>
               </div>
             ) : (
@@ -965,13 +975,14 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* CHANGED: uses project count per dept — always shows data */}
                 {barData.length > 0 ? (
                   <div style={CARD}>
                     <div style={CARD_TOP}>
                       <div>
-                        <h3 style={CARD_H}>Budget by Department</h3>
+                        <h3 style={CARD_H}>Projects by Department</h3>
                         <p style={CARD_SUB}>
-                          Budget totals grouped by department.
+                          Number of projects grouped by department.
                         </p>
                       </div>
                     </div>
@@ -993,8 +1004,9 @@ export default function Dashboard() {
 
                         <YAxis
                           tick={{ fontSize: 11, fill: "#6b7280" }}
+                          allowDecimals={false}
                           label={{
-                            value: "Budget (K)",
+                            value: "Projects",
                             angle: -90,
                             position: "insideLeft",
                             fontSize: 11,
@@ -1003,17 +1015,17 @@ export default function Dashboard() {
                         />
 
                         <Tooltip
-                          formatter={(v, name) => {
-                            if (name === "budget") return [`₱${v}K`, "Budget"];
-                            return [v, name];
-                          }}
+                          formatter={(v, name) =>
+                            name === "count" ? [v, "Projects"] : [v, name]
+                          }
                         />
 
                         <Bar
-                          dataKey="budget"
+                          dataKey="count"
                           fill="#16a34a"
                           radius={[4, 4, 0, 0]}
                           maxBarSize={50}
+                          name="count"
                         />
                       </BarChart>
                     </ResponsiveContainer>
@@ -1022,8 +1034,8 @@ export default function Dashboard() {
                   <div style={CARD}>
                     <EmptyBox
                       icon={Wallet}
-                      title="No budget data"
-                      subtitle="Budget chart will appear once proposals include budget information."
+                      title="No department data"
+                      subtitle="Chart will appear once proposals include department information."
                     />
                   </div>
                 )}

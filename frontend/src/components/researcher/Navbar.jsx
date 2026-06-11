@@ -32,7 +32,7 @@ export default function Navbar() {
     { name: "Team Management",   icon: <Users size={20} />,          path: "/researcher/team" },
     { name: "Outputs",           icon: <BarChart2 size={20} />,      path: "/researcher/outputs" },
     { name: "Status Tracking",   icon: <Activity size={20} />,       path: "/researcher/status-tracking" },
-    { name: "Profile",   icon: <User size={20} />,       path: "/profile" },
+    { name: "Profile",   icon: <User size={20} />,       path: "/researcher/profile" },
   ];
 
   return (

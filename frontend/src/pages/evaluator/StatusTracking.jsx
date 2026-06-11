@@ -38,10 +38,30 @@ export default function EvaluatorStatusTracking() {
   const [loading,      setLoading]      = useState(false);
 
   useEffect(() => {
-    api.get("/projects").then((res) => {
-      setProjects(res.data);
-      if (res.data.length > 0) setSelectedId(String(res.data[0].id));
-    });
+    // For evaluators, only fetch projects they're assigned to evaluate
+    api.get("/evaluations/pending")
+      .then((res) => {
+        const pending = Array.isArray(res.data) ? res.data : [];
+        // Also fetch completed so they can track those too
+        return api.get("/evaluations/completed").then((cRes) => {
+          const completed = Array.isArray(cRes.data) ? cRes.data : [];
+          // Merge unique projects from pending + completed
+          const allProjects = [
+            ...pending.map((p) => ({ id: p.id, reference_no: p.reference_no || p.project_id, title: p.title })),
+            ...completed.map((p) => ({ id: p.project_id, reference_no: p.reference_no || `PRJ-${p.project_id}`, title: p.title })),
+          ];
+          // Deduplicate by id
+          const seen = new Set();
+          const unique = allProjects.filter((p) => {
+            if (!p.id || seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
+          });
+          setProjects(unique);
+          if (unique.length > 0) setSelectedId(String(unique[0].id));
+        });
+      })
+      .catch(() => setProjects([]));
   }, []);
 
   useEffect(() => {

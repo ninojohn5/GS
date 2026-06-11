@@ -57,7 +57,7 @@ export default function SignUp() {
     setError("");
     if (!name.trim())        { setError("Full name is required."); return; }
     if (!email.trim())       { setError("Email is required."); return; }
-    if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (password.length < 8) { setError("Password must be at least 8 characters."); return; }
     if (password !== confirm) { setError("Passwords do not match."); return; }
     setStep(2);
   };
@@ -162,7 +162,7 @@ export default function SignUp() {
                   Password
                 </label>
                 <div style={{ position: "relative" }}>
-                  <input type={showPw ? "text" : "password"} placeholder="At least 6 characters"
+                  <input type={showPw ? "text" : "password"} placeholder="At least 8 characters"
                     value={password} onChange={(e) => setPassword(e.target.value)}
                     style={{ paddingRight: 42 }} />
                   <EyeBtn show={showPw} toggle={() => setShowPw(p => !p)} />

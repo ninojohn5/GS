@@ -17,7 +17,60 @@ import {
   Eye,
   AlertCircle,
   Paperclip,
+  ExternalLink,
 } from "lucide-react";
+
+function DocViewerModal({ docs, initialIndex = 0, onClose }) {
+  const [activeIndex, setActiveIndex] = useState(initialIndex);
+  const doc = docs[activeIndex];
+  if (!doc) return null;
+  const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(doc.url);
+  // Default to PDF iframe for anything that's not an image
+  const isPdf = !isImage;
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", zIndex: 2000, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 14, width: "100%", maxWidth: 960, height: "88vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.35)" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px", borderBottom: "1px solid #e5e7eb", flexShrink: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <FileText size={17} color="#1d4ed8" />
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{doc.label}</span>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <a href={doc.url} target="_blank" rel="noopener noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb", color: "#374151", fontSize: 13, fontWeight: 500, textDecoration: "none" }}>
+              <ExternalLink size={13} /> Open in tab
+            </a>
+            <button onClick={onClose} style={{ display: "inline-flex", alignItems: "center", gap: 5, padding: "7px 14px", borderRadius: 8, border: "none", background: "#374151", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+              × Close
+            </button>
+          </div>
+        </div>
+        {/* Tabs */}
+        {docs.length > 1 && (
+          <div style={{ display: "flex", borderBottom: "1px solid #e5e7eb", background: "#f9fafb", flexShrink: 0, overflowX: "auto" }}>
+            {docs.map((d, i) => (
+              <button key={i} onClick={() => setActiveIndex(i)}
+                style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 18px", border: "none", borderBottom: `2px solid ${activeIndex === i ? "#1d4ed8" : "transparent"}`, background: "transparent", color: activeIndex === i ? "#1d4ed8" : "#6b7280", fontSize: 13, fontWeight: activeIndex === i ? 700 : 400, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
+                <FileText size={13} /> {d.label}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* Preview */}
+        <div style={{ flex: 1, overflow: "hidden", background: "#f3f4f6" }}>
+          {isImage ? (
+            <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", overflow: "auto", padding: 16 }}>
+              <img src={doc.url} alt={doc.label} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", borderRadius: 8 }} />
+            </div>
+          ) : (
+            <iframe src={doc.url} style={{ width: "100%", height: "100%", border: "none" }} title={doc.label} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const SB = {
   "Under Evaluation": { bg: "#fff7ed", color: "#c2410c", border: "#fed7aa" },
@@ -75,184 +128,141 @@ function StatusBadge({ status }) {
 
 /* ── Completed Action View Modal ─────────────────────────── */
 function ViewActionModal({ action, onClose }) {
+  const [projectDocs, setProjectDocs] = useState(null);
+  const [viewingDocIndex, setViewingDocIndex] = useState(null);
+
+  useEffect(() => {
+    const projectId = action?.id || action?.project_id;
+    if (!projectId) return;
+    api.get(`/projects/${projectId}`).then((res) => {
+      const p = res.data || {};
+      const toUrl = (path) => path ? `${import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage"}/${path}` : null;
+      const safeParse = (val) => {
+        if (!val) return [];
+        try {
+          let parsed = val;
+          while (typeof parsed === "string") parsed = JSON.parse(parsed);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch { return typeof val === "string" ? [val] : []; }
+      };
+      const cvPaths = safeParse(p.cv_paths);
+      const docs = [
+        { label: "Proposal Form", url: toUrl(p.proposal_form_path || p.proposal_form) },
+        ...cvPaths.map((path, i) => ({ label: `CV (${i + 1})`, url: toUrl(path) })),
+        { label: "Work Plan",     url: toUrl(p.work_plan_path  || p.work_plan_file)  },
+        { label: "Framework",     url: toUrl(p.framework_path  || p.framework_file)  },
+        { label: "References",    url: toUrl(p.references_path || p.references_file) },
+      ].filter((d) => d.url);
+      setProjectDocs(docs);
+    }).catch(() => setProjectDocs([]));
+  }, [action?.id, action?.project_id]);
+
   if (!action) return null;
 
   return (
-    <div
-      style={MO.overlay}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div style={{ ...MO.modal, maxWidth: 620 }}>
-        <div style={MO.header}>
-          <div style={{ minWidth: 0 }}>
-            <h2 style={MO.title}>Completed Action Details</h2>
-            <p style={MO.sub}>
-              {action.reference_no || "—"} - {action.title || "Untitled Proposal"}
-            </p>
+    <>
+      <div style={MO.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div style={{ ...MO.modal, maxWidth: 620 }}>
+          <div style={MO.header}>
+            <div style={{ minWidth: 0 }}>
+              <h2 style={MO.title}>Completed Action Details</h2>
+              <p style={MO.sub}>{action.reference_no || "—"} - {action.title || "Untitled Proposal"}</p>
+            </div>
+            <button type="button" style={MO.closeBtn} onClick={onClose}><X size={18} /></button>
           </div>
 
-          <button type="button" style={MO.closeBtn} onClick={onClose}>
-            <X size={18} />
-          </button>
-        </div>
-
-        <div style={MO.body}>
-          <div style={MO.infoCard}>
-            <div style={MO.infoGrid}>
-              <div>
-                <p style={MO.iL}>Reference No</p>
-                <p style={MO.iV}>{action.reference_no || "—"}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Project Status</p>
-                <StatusBadge status={action.project_status} />
-              </div>
-
-              <div>
-                <p style={MO.iL}>Researcher</p>
-                <p style={MO.iV}>{action.submitted_by || "—"}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Department</p>
-                <p style={MO.iV}>{action.department || "—"}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Budget</p>
-                <p style={MO.iV}>₱{fmt(action.budget)}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Type</p>
-                <p style={MO.iV}>{action.type || "—"}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Start Date</p>
-                <p style={MO.iV}>{fmtDate(action.start_date)}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>End Date</p>
-                <p style={MO.iV}>{fmtDate(action.end_date)}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Evaluation Score</p>
-                <p style={MO.iV}>
-                  {action.average_score ? `${action.average_score}/100` : "—"}
-                </p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Date Acted</p>
-                <p style={MO.iV}>{action.acted_at || "—"}</p>
-              </div>
-            </div>
-          </div>
-
-          <div style={MO.infoCard}>
-            <div style={MO.infoGrid}>
-              <div>
-                <p style={MO.iL}>Your Role</p>
-                <p style={MO.iV}>{action.role_at_approval || "—"}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Your Action</p>
-                <StatusBadge status={action.action} />
-              </div>
-
-              <div>
-                <p style={MO.iL}>Reference Action No</p>
-                <p style={MO.iV}>{action.reference_action_no || "—"}</p>
-              </div>
-
-              <div>
-                <p style={MO.iL}>Signature Type</p>
-                <p style={MO.iV}>{action.signature_type || "—"}</p>
+          <div style={MO.body}>
+            <div style={MO.infoCard}>
+              <div style={MO.infoGrid}>
+                <div><p style={MO.iL}>Reference No</p><p style={MO.iV}>{action.reference_no || "—"}</p></div>
+                <div><p style={MO.iL}>Project Status</p><StatusBadge status={action.project_status} /></div>
+                <div><p style={MO.iL}>Researcher</p><p style={MO.iV}>{action.submitted_by || "—"}</p></div>
+                <div><p style={MO.iL}>Department</p><p style={MO.iV}>{action.department || "—"}</p></div>
+                <div><p style={MO.iL}>Budget</p><p style={MO.iV}>{fmt(action.budget)}</p></div>
+                <div><p style={MO.iL}>Type</p><p style={MO.iV}>{action.type || "—"}</p></div>
+                <div><p style={MO.iL}>Start Date</p><p style={MO.iV}>{fmtDate(action.start_date)}</p></div>
+                <div><p style={MO.iL}>End Date</p><p style={MO.iV}>{fmtDate(action.end_date)}</p></div>
+                <div><p style={MO.iL}>Evaluation Score</p><p style={MO.iV}>{action.average_score ? `${action.average_score}/100` : "—"}</p></div>
+                <div><p style={MO.iL}>Date Acted</p><p style={MO.iV}>{action.acted_at || "—"}</p></div>
               </div>
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              <p style={MO.iL}>Remarks</p>
-              <div
-                style={{
-                  marginTop: 6,
-                  padding: "10px 12px",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 8,
-                  background: "#fff",
-                  fontSize: 13,
-                  color: "#374151",
-                  lineHeight: 1.5,
-                  minHeight: 44,
-                }}
-              >
-                {action.remarks || "No remarks provided."}
+            <div style={MO.infoCard}>
+              <div style={MO.infoGrid}>
+                <div><p style={MO.iL}>Your Role</p><p style={MO.iV}>{action.role_at_approval || "—"}</p></div>
+                <div><p style={MO.iL}>Your Action</p><StatusBadge status={action.action} /></div>
+                <div><p style={MO.iL}>Reference Action No</p><p style={MO.iV}>{action.reference_action_no || "—"}</p></div>
+                <div><p style={MO.iL}>Signature Type</p><p style={MO.iV}>{action.signature_type || "—"}</p></div>
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <p style={MO.iL}>Remarks</p>
+                <div style={{ marginTop: 6, padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: 8,
+                  background: "#fff", fontSize: 13, color: "#374151", lineHeight: 1.5, minHeight: 44 }}>
+                  {action.remarks || "No remarks provided."}
+                </div>
+              </div>
+              <div style={{ marginTop: 14 }}>
+                <p style={MO.iL}>Signature</p>
+                <div style={{ marginTop: 6, minHeight: 90, border: "1px solid #e5e7eb", borderRadius: 10,
+                  background: "#fafafa", display: "flex", alignItems: "center", justifyContent: "center", padding: 12 }}>
+                  {action.signature_image
+                    ? <img src={action.signature_image} alt="Signature" style={{ maxHeight: 90, maxWidth: "100%", objectFit: "contain" }} />
+                    : <span style={{ fontSize: 13, color: "#9ca3af" }}>No signature uploaded.</span>
+                  }
+                </div>
               </div>
             </div>
 
-            <div style={{ marginTop: 14 }}>
-              <p style={MO.iL}>Signature</p>
-
-              <div
-                style={{
-                  marginTop: 6,
-                  minHeight: 90,
-                  border: "1px solid #e5e7eb",
-                  borderRadius: 10,
-                  background: "#fafafa",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  padding: 12,
-                }}
-              >
-                {action.signature_image ? (
-                  <img
-                    src={action.signature_image}
-                    alt="Signature"
-                    style={{
-                      maxHeight: 90,
-                      maxWidth: "100%",
-                      objectFit: "contain",
-                    }}
-                  />
-                ) : (
-                  <span style={{ fontSize: 13, color: "#9ca3af" }}>
-                    No signature uploaded.
-                  </span>
-                )}
-              </div>
+            {/* Documents section */}
+            <div style={MO.field}>
+              <label style={{ ...MO.label, display: "flex", alignItems: "center", gap: 6 }}>
+                <Paperclip size={14} color="#374151" /> Submitted Documents
+              </label>
+              {projectDocs === null ? (
+                <p style={{ fontSize: 12, color: "#9ca3af" }}>Loading documents...</p>
+              ) : projectDocs.length === 0 ? (
+                <p style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic" }}>No documents uploaded.</p>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  {projectDocs.map((doc, i) => (
+                    <button key={doc.label} onClick={() => setViewingDocIndex(i)}
+                      style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+                        borderRadius: 8, border: "1px solid #e5e7eb", background: "#f9fafb",
+                        color: "#1d4ed8", fontSize: 13, fontWeight: 500, cursor: "pointer",
+                        width: "100%", textAlign: "left" }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "#f9fafb"}>
+                      <FileText size={14} color="#1d4ed8" />
+                      {doc.label}
+                      <Eye size={13} style={{ marginLeft: "auto", color: "#6b7280" }} />
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                padding: "9px 18px",
-                borderRadius: 8,
-                border: "1px solid #d1d5db",
-                background: "#fff",
-                color: "#374151",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              Close
-            </button>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button type="button" onClick={onClose}
+                style={{ padding: "9px 18px", borderRadius: 8, border: "1px solid #d1d5db",
+                  background: "#fff", color: "#374151", fontSize: 13, fontWeight: 600, cursor: "pointer" }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {viewingDocIndex !== null && projectDocs && (
+        <DocViewerModal
+          docs={projectDocs}
+          initialIndex={viewingDocIndex}
+          onClose={() => setViewingDocIndex(null)}
+        />
+      )}
+    </>
   );
 }
+
 
 /* ── Review Modal ────────────────────────────────────────── */
 function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
@@ -270,20 +280,27 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
     ).padStart(2, "0")}/${d.getFullYear()}`;
   });
   const [projectDocs, setProjectDocs] = useState(null);
-
-  // Fetch project docs when modal opens
+  const [viewingDocIndex, setViewingDocIndex] = useState(null);
   useEffect(() => {
     if (!proposal?.id) return;
     api.get(`/projects/${proposal.id}`).then((res) => {
       const p = res.data || {};
-      const base = window.location.origin;
-      const toUrl = (path) => path ? `${base}/storage/${path}` : null;
+      const toUrl = (path) => path ? `${import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage"}/${path}` : null;
+      const safeParse = (val) => {
+        if (!val) return [];
+        try {
+          let parsed = val;
+          while (typeof parsed === "string") parsed = JSON.parse(parsed);
+          return Array.isArray(parsed) ? parsed : [parsed];
+        } catch { return typeof val === "string" ? [val] : []; }
+      };
+      const cvPaths = safeParse(p.cv_paths);
       setProjectDocs([
-        { label: "Proposal Form",  url: toUrl(p.proposal_form_path || p.proposal_form) },
-        { label: "CV(s)",          url: toUrl(Array.isArray(p.cv_paths) ? p.cv_paths[0] : p.cv_paths || p.cv_files) },
-        { label: "Work Plan",      url: toUrl(p.work_plan_path || p.work_plan_file) },
-        { label: "Framework",      url: toUrl(p.framework_path || p.framework_file) },
-        { label: "References",     url: toUrl(p.references_path || p.references_file) },
+        { label: "Proposal Form", url: toUrl(p.proposal_form_path || p.proposal_form) },
+        ...cvPaths.map((path, i) => ({ label: `CV (${i + 1})`, url: toUrl(path) })),
+        { label: "Work Plan",     url: toUrl(p.work_plan_path  || p.work_plan_file)  },
+        { label: "Framework",     url: toUrl(p.framework_path  || p.framework_file)  },
+        { label: "References",    url: toUrl(p.references_path || p.references_file) },
       ].filter((d) => d.url));
     }).catch(() => setProjectDocs([]));
   }, [proposal?.id]);
@@ -386,11 +403,12 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
   };
 
   return (
-    <div
-      style={MO.overlay}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div style={MO.modal}>
+    <>
+      <div
+        style={MO.overlay}
+        onClick={(e) => e.target === e.currentTarget && onClose()}
+      >
+        <div style={MO.modal}>
         <div style={MO.header}>
           <div style={{ minWidth: 0 }}>
             <h2 style={MO.title}>Review Proposal</h2>
@@ -470,18 +488,16 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
               <p style={{ fontSize: 12, color: "#9ca3af" }}>No documents uploaded.</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {projectDocs.map((doc) => (
-                  <a
+                {projectDocs.map((doc, i) => (
+                  <button
                     key={doc.label}
-                    href={doc.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={() => setViewingDocIndex(i)}
                     style={{
                       display: "flex", alignItems: "center", gap: 8,
                       padding: "8px 12px", borderRadius: 8,
                       border: "1px solid #e5e7eb", background: "#f9fafb",
                       color: "#1d4ed8", fontSize: 13, fontWeight: 500,
-                      textDecoration: "none",
+                      cursor: "pointer", width: "100%", textAlign: "left",
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.background = "#eff6ff"}
                     onMouseLeave={(e) => e.currentTarget.style.background = "#f9fafb"}
@@ -489,7 +505,7 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
                     <FileText size={14} color="#1d4ed8" />
                     {doc.label}
                     <Eye size={13} style={{ marginLeft: "auto", color: "#6b7280" }} />
-                  </a>
+                  </button>
                 ))}
               </div>
             )}
@@ -739,6 +755,14 @@ function ReviewModal({ proposal, onClose, onAct, submitting, error }) {
         </div>
       </div>
     </div>
+      {viewingDocIndex !== null && projectDocs && (
+        <DocViewerModal
+          docs={projectDocs}
+          initialIndex={viewingDocIndex}
+          onClose={() => setViewingDocIndex(null)}
+        />
+      )}
+    </>
   );
 }
 

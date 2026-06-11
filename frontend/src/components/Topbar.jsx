@@ -37,14 +37,12 @@ export default function Topbar({ title = "Dashboard" }) {
     : "Guest";
   const initial  = userName.charAt(0).toUpperCase();
   const avatarBg = {
-    researcher:         "#1f7a1f",
-    evaluator:          "#391676",
-    admin:              "#f59e0b",
-    approver:           "#141617",
-    rde_division_chief: "#391676",
-    campus_director:    "#391676",
-    vprie:              "#141617",
-    president:          "#141617",
+    researcher:    "#1f7a1f",
+    evaluator:     "#391676",
+    admin:         "#f59e0b",
+    rdiso_director:"#141617",
+    vprie:         "#141617",
+    president:     "#141617",
   }[session?.role] || "#1f7a1f";
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -265,14 +263,12 @@ export default function Topbar({ title = "Dashboard" }) {
                     setDropdownOpen(false);
                     const role = session?.role || "researcher";
                     const profileRoutes = {
-                      researcher: "/researcher/profile",
-                      admin:      "/admin/profile",
-                      approver:   "/approver/profile",
-                      rde_division_chief: "/approver/profile",
-                      campus_director:    "/approver/profile",
-                      vprie:              "/approver/profile",
-                      president:          "/approver/profile",
-                      evaluator:  "/evaluator/profile",
+                      researcher:     "/researcher/profile",
+                      admin:          "/admin/profile",
+                      rdiso_director: "/approver/profile",
+                      vprie:          "/approver/profile",
+                      president:      "/approver/profile",
+                      evaluator:      "/evaluator/profile",
                     };
                     navigate(profileRoutes[role] || "/researcher/profile");
                   }}

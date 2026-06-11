@@ -12,16 +12,23 @@ import Topbar from "../../components/Topbar";
 import "../../styles/researcher.css";
 import { useNavigate } from "react-router-dom";
 import api from "../../utils/api";
+import { getSession } from "../../utils/auth";
 
 const statusClass = {
-  Approved: "approved",
-  "Under Evaluation": "evaluating",
-  "In Progress": "progress",
-  Submitted: "submitted",
-  Draft: "draft",
-  Rejected: "rejected",
-  "For Revision": "revision",
-  Archived: "draft",
+  Approved:               "approved",
+  "Under Evaluation":     "evaluating",
+  "In Progress":          "progress",
+  Submitted:              "submitted",
+  Draft:                  "draft",
+  Rejected:               "rejected",
+  "For Revision":         "revision",
+  Returned:               "revision",
+  Archived:               "draft",
+  Evaluated:              "evaluating",
+  Endorsed:               "approved",
+  Recommended:            "approved",
+  "Presentation Scheduled": "submitted",
+  Scheduled:              "submitted",
 };
 
 export default function ResearchProjects() {
@@ -30,6 +37,7 @@ export default function ResearchProjects() {
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const currentUserId = parseInt(getSession()?.id || "0");
 
   useEffect(() => {
     fetchProjects(statusFilter);
@@ -213,10 +221,14 @@ export default function ResearchProjects() {
                 <option>All Status</option>
                 <option>Draft</option>
                 <option>Submitted</option>
+                <option>Presentation Scheduled</option>
                 <option>Under Evaluation</option>
-                <option>In Progress</option>
+                <option>Evaluated</option>
+                <option>Endorsed</option>
+                <option>Recommended</option>
                 <option>Approved</option>
                 <option>For Revision</option>
+                <option>Returned</option>
                 <option>Rejected</option>
                 <option>Archived</option>
               </select>
@@ -238,6 +250,7 @@ export default function ResearchProjects() {
                     <th>Title</th>
                     <th>Type</th>
                     <th>Budget</th>
+                    <th>Funding</th>
                     <th>Status</th>
                     <th>Actions</th>
                   </tr>
@@ -247,7 +260,7 @@ export default function ResearchProjects() {
                   {loading && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         style={{
                           textAlign: "center",
                           color: "#9ca3af",
@@ -280,94 +293,60 @@ export default function ResearchProjects() {
                           </td>
 
                           <td>
-                            <span
-                              className={`badge ${
-                                statusClass[status] || "draft"
-                              }`}
-                            >
+                            {p.funding_type === "external" ? (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4,
+                                padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                                background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe",
+                                whiteSpace: "nowrap" }}>
+                                🌐 External
+                              </span>
+                            ) : (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: 4,
+                                padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                                background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0",
+                                whiteSpace: "nowrap" }}>
+                                🏛️ Local
+                              </span>
+                            )}
+                          </td>
+
+                          <td>
+                            <span className={`badge ${statusClass[status] || "draft"}`}>
                               {status}
                             </span>
                           </td>
 
                           <td>
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                                whiteSpace: "nowrap",
-                              }}
-                            >
+                            <div style={{ display: "flex", alignItems: "center", gap: 10, whiteSpace: "nowrap" }}>
                               {status === "Archived" ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleRestoreProject(p)}
-                                  style={{
-                                    border: "none",
-                                    background: "transparent",
-                                    color: "#15803d",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    padding: 0,
-                                    fontSize: 13,
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                  }}
-                                >
-                                  <RotateCcw size={14} />
-                                  Restore
+                                <button type="button" onClick={() => handleRestoreProject(p)}
+                                  style={{ border: "none", background: "transparent", color: "#15803d", fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 13, display: "inline-flex", alignItems: "center", gap: 5 }}>
+                                  <RotateCcw size={14} /> Restore
                                 </button>
                               ) : (
                                 <>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleProjectAction(p)}
-                                    style={{
-                                      border: "none",
-                                      background: "transparent",
-                                      color:
-                                        status === "Draft" ||
-                                        status === "For Revision"
-                                          ? "#1f7a1f"
-                                          : "#15803d",
-                                      fontWeight: 700,
-                                      cursor: "pointer",
-                                      padding: 0,
-                                      fontSize: 13,
-                                    }}
-                                  >
-                                    {getActionLabel(status)}
+                                  <button type="button" onClick={() => handleProjectAction(p)}
+                                    style={{ border: "none", background: "transparent", color: "#15803d", fontWeight: 700, cursor: "pointer", padding: 0, fontSize: 13 }}>
+                                    {/* Team members always see View; only creator sees Continue/Revise */}
+                                    {p.created_by === currentUserId ? getActionLabel(status) : "View"}
                                   </button>
 
-                                  <button
-                                    type="button"
-                                    title="Archive project"
-                                    onClick={() => handleArchiveProject(p)}
-                                    style={{
-                                      border: "none",
-                                      background: "transparent",
-                                      color: "#dc2626",
-                                      width: 28,
-                                      height: 28,
-                                      borderRadius: 6,
-                                      display: "inline-flex",
-                                      alignItems: "center",
-                                      justifyContent: "center",
-                                      cursor: "pointer",
-                                      padding: 0,
-                                    }}
-                                    onMouseEnter={(e) => {
-                                      e.currentTarget.style.background =
-                                        "#fef2f2";
-                                    }}
-                                    onMouseLeave={(e) => {
-                                      e.currentTarget.style.background =
-                                        "transparent";
-                                    }}
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
+                                  {/* Only creator can archive */}
+                                  {p.created_by === currentUserId && (
+                                    <button type="button" title="Archive project" onClick={() => handleArchiveProject(p)}
+                                      style={{ border: "none", background: "transparent", color: "#dc2626", width: 28, height: 28, borderRadius: 6, display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer", padding: 0 }}
+                                      onMouseEnter={(e) => { e.currentTarget.style.background = "#fef2f2"; }}
+                                      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}>
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+
+                                  {/* Team member badge */}
+                                  {p.created_by !== currentUserId && (
+                                    <span style={{ fontSize: 11, color: "#6b7280", background: "#f3f4f6", borderRadius: 99, padding: "2px 8px", fontWeight: 500 }}>
+                                      Team Member
+                                    </span>
+                                  )}
                                 </>
                               )}
                             </div>
@@ -379,7 +358,7 @@ export default function ResearchProjects() {
                   {!loading && filtered.length === 0 && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         style={{
                           textAlign: "center",
                           color: "#9ca3af",

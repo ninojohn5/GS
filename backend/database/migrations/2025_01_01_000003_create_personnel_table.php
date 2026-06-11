@@ -36,8 +36,7 @@ return new class extends Migration
             $table->enum('role', [
                 'researcher',
                 'evaluator',
-                'rde_division_chief',
-                'campus_director',
+                'rdiso_director',
                 'vprie',
                 'president',
                 'admin',

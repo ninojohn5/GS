@@ -7,6 +7,7 @@ use App\Models\Personnel;
 use App\Models\ResearchProject;
 use App\Models\OralPresentation;
 use App\Models\Proposal;
+use App\Models\ProposalStatusHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -32,13 +33,28 @@ class AdminController extends Controller
                 'departmentCenter',
                 'proposal',
                 'oralPresentation.evaluators',
+                'evaluations',
             ]);
 
         if ($request->filled('funding_type')) {
             $query->where('funding_type', $request->input('funding_type'));
         }
 
-        $proposals = $query->latest()->get();
+        $proposals = $query->latest()->get()->map(function ($project) {
+            $arr = $project->toArray();
+
+            // Compute average_score from evaluations so Reports.jsx can read it
+            $scores = $project->evaluations
+                ->pluck('total_score')
+                ->filter(fn($s) => $s !== null && $s > 0)
+                ->values();
+
+            $arr['average_score'] = $scores->count() > 0
+                ? round($scores->avg(), 2)
+                : null;
+
+            return $arr;
+        });
 
         return response()->json($proposals);
     }
@@ -74,7 +90,6 @@ class AdminController extends Controller
     public function evaluators()
     {
         $evaluators = Personnel::where('role', 'evaluator')
-            ->where('is_active', true)
             ->orderBy('name')
             ->get([
                 'id',
@@ -127,6 +142,13 @@ class AdminController extends Controller
         );
 
         $project->update(['status' => 'Presentation Scheduled']);
+
+        ProposalStatusHistory::create([
+            'research_project_id' => $project->id,
+            'status'              => 'Presentation Scheduled',
+            'changed_by'          => request()->user()->id,
+            'remarks'             => 'Oral presentation scheduled by admin.',
+        ]);
 
         return response()->json([
             'message'      => 'Oral presentation scheduled successfully.',

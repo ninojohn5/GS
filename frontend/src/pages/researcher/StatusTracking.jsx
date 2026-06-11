@@ -712,30 +712,43 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
 
       <div class="section">
         <div class="section-title">VII. Uploaded Documents</div>
-        <table>
-          <thead>
-            <tr>
-              <th>Document Type</th>
-              <th>File Name</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${[
-              { label: "Proposal Form",   path: project.proposal_form_path || project.proposal_form },
-              { label: "CV(s)",           path: Array.isArray(project.cv_paths) ? project.cv_paths.join(", ") : (project.cv_paths || project.cv_files) },
-              { label: "Work Plan",       path: project.work_plan_path || project.work_plan_file },
-              { label: "Framework",       path: project.framework_path || project.framework_file },
-              { label: "References",      path: project.references_path || project.references_file },
-            ].map((doc) => `
-              <tr>
-                <td class="strong">${doc.label}</td>
-                <td>${doc.path ? String(doc.path).split("/").pop() : "<span class='muted italic'>Not uploaded</span>"}</td>
-                <td class="center"><span class="${doc.path ? "status-pill" : "muted italic"}">${doc.path ? "Uploaded" : "Missing"}</span></td>
-              </tr>
-            `).join("")}
-          </tbody>
-        </table>
+        ${(() => {
+          const BASE = (import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage") + "/";
+
+          const safeParseCvs = (raw) => {
+            if (!raw) return [];
+            try {
+              let p = raw;
+              while (typeof p === "string") p = JSON.parse(p);
+              return Array.isArray(p) ? p : p ? [p] : [];
+            } catch { return raw ? [raw] : []; }
+          };
+
+          const docs = [
+            { label: "Proposal Form", path: project.proposal_form_path || project.proposal_form },
+            { label: "Work Plan",     path: project.work_plan_path || project.work_plan_file },
+            { label: "Framework",     path: project.framework_path || project.framework_file },
+            { label: "References",    path: project.references_path || project.references_file },
+            ...safeParseCvs(project.cv_paths || project.cv_files).map((p, i) => ({ label: "CV (" + (i+1) + ")", path: p })),
+          ];
+
+          return docs.map((doc) => {
+            if (!doc.path) {
+              return '<div style="margin-bottom:14px;"><p style="font-weight:700;font-size:8.5pt;color:#374151;margin:0 0 4px;">' + doc.label + '</p><p style="font-size:8pt;color:#94a3b8;font-style:italic;margin:0;">Not uploaded</p></div>';
+            }
+            const url = BASE + doc.path;
+            const fileName = String(doc.path).split("/").pop();
+            const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(doc.path);
+            // Default to iframe for non-images (handles PDFs without extensions)
+            let preview = '';
+            if (isImage) {
+              preview = '<img src="' + url + '" style="max-width:100%;max-height:300px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;" />';
+            } else {
+              preview = '<iframe src="' + url + '" style="width:100%;height:420px;border:1px solid #e5e7eb;border-radius:4px;" title="' + doc.label + '"></iframe>';
+            }
+            return '<div style="margin-bottom:18px;break-inside:avoid;page-break-inside:avoid;"><p style="font-weight:700;font-size:8.5pt;color:#1f7a1f;margin:0 0 5px;border-bottom:1px solid #e5e7eb;padding-bottom:3px;">' + doc.label + ' — ' + fileName + '</p>' + preview + '</div>';
+          }).join("");
+        })()}
       </div>
 
       <div style="margin-top:28px; border-top:2px solid #1f7a1f; padding-top:16px;">
@@ -751,21 +764,6 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Evaluated by:<br/><span style="font-weight:400; color:#64748b;">Evaluation Committee</span></td>
-              <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;"><div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div></td>
-              <td style="padding:10px 8px; border-bottom:1px solid #edf2f7;"><div style="border-bottom:1px solid #374151; min-height:36px;"></div><div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ___________</div></td>
-            </tr>
-            <tr>
-              <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Reviewed &amp; Evaluated by:<br/><span style="font-weight:400; color:#64748b;">RDISO Director / ESO Director</span></td>
-              <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;">
-                ${getSig("Endorsed") ? `<img src="${getSig("Endorsed")}" style="max-height:32px; max-width:110px; object-fit:contain; display:block; margin:0 auto;" />` : `<div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div>`}
-              </td>
-              <td style="padding:10px 8px; border-bottom:1px solid #edf2f7;">
-                <div style="font-weight:600;">${[...history].reverse().find(h => h.status === "Endorsed")?.action_by || "___________________________"}</div>
-                <div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ${[...history].reverse().find(h => h.status === "Endorsed")?.date || "___________"}</div>
-              </td>
-            </tr>
             <tr>
               <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Recommending Approval:<br/><span style="font-weight:400; color:#64748b;">Vice President for Research, Innovation &amp; Extension</span></td>
               <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;">

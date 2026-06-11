@@ -18,11 +18,13 @@ import {
   MapPin,
   UserCheck,
   ClipboardList,
+  Trash2,
 } from "lucide-react";
 import Navbar from "../../components/researcher/Navbar";
 import Topbar from "../../components/Topbar";
 import "../../styles/researcher.css";
 import api from "../../utils/api";
+import { getSession } from "../../utils/auth";
 
 const STATUS_CFG = {
   Approved: { bg: "#dcfce7", color: "#15803d", border: "#bbf7d0", dot: "#15803d" },
@@ -167,7 +169,9 @@ const parseMaybeJson = (value, fallback) => {
 };
 
 const getApiOrigin = () => {
-  const base = api?.defaults?.baseURL || window.location.origin;
+  const base = import.meta.env.VITE_STORAGE_URL
+    ? import.meta.env.VITE_STORAGE_URL.replace(/\/storage\/?$/, "")
+    : (api?.defaults?.baseURL || "http://127.0.0.1:8000").replace(/\/api\/?$/, "");
 
   return base
     .replace(/\/api\/?$/, "")
@@ -798,6 +802,19 @@ export default function ProjectView() {
   const [workPlanItems, setWorkPlanItems] = useState([]);
   const [error, setError] = useState("");
 
+  // Work plan activity builder state
+  const WP_MONTHS = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
+  const WP_MONTH_LABELS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const WP_EMPTY = { title:"", description:"", milestone:"Year 1",
+    jan:false,feb:false,mar:false,apr:false,may:false,jun:false,
+    jul:false,aug:false,sep:false,oct:false,nov:false,dec:false };
+  const [showWpForm,  setShowWpForm]  = useState(false);
+  const [newActivity, setNewActivity] = useState(WP_EMPTY);
+  const [savingWp,    setSavingWp]    = useState(false);
+  const [wpError,     setWpError]     = useState("");
+  const [wpSuccess,   setWpSuccess]   = useState("");
+  const currentUserId = parseInt(getSession()?.id || "0");
+
   const oralPresentation = getRelation(project, "oral_presentation", "oralPresentation");
   const evaluators = Array.isArray(oralPresentation?.evaluators) && oralPresentation.evaluators.length > 0
   ? oralPresentation.evaluators
@@ -1370,77 +1387,194 @@ export default function ProjectView() {
               </div>
             )}
 
-            {activeTab === "Work Plan" && (
-              <div className="cp-section">
-                <div className="cp-section-title">Work Plan — Gantt Chart</div>
-
-                {workPlanItems.length === 0 ? (
-                  <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af" }}>
-                    <ClipboardList size={36} style={{ marginBottom: 10 }} />
-                    <p style={{ margin: 0, fontSize: 14 }}>No work plan activities yet.</p>
+            {activeTab === "Work Plan" && (() => {
+              const isCreator = project && parseInt(project.created_by) === currentUserId;
+              const isDraft   = project?.status === "Draft";
+              const canEdit   = isCreator && isDraft;
+              const handleAddActivity = async () => {
+                if (!newActivity.title.trim()) { setWpError("Activity title is required."); return; }
+                setWpError(""); setSavingWp(true);
+                try {
+                  const res = await api.post(`/projects/${id}/work-plan`, newActivity);
+                  setWorkPlanItems((p) => [...p, res.data]);
+                  setNewActivity(WP_EMPTY);
+                  setShowWpForm(false);
+                  setWpSuccess("Activity added!"); setTimeout(() => setWpSuccess(""), 2500);
+                } catch (err) {
+                  setWpError(err.response?.data?.message || "Failed to add activity.");
+                } finally { setSavingWp(false); }
+              };
+              const handleDeleteActivity = async (actId) => {
+                try {
+                  await api.delete(`/projects/${id}/work-plan/${actId}`);
+                  setWorkPlanItems((p) => p.filter((a) => a.id !== actId));
+                } catch {}
+              };
+              return (
+                <div className="cp-section">
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div className="cp-section-title" style={{ margin: 0 }}>Work Plan — Gantt Chart</div>
+                    {canEdit && (
+                      <button type="button" onClick={() => { setShowWpForm(true); setWpError(""); }}
+                        style={{ padding: "7px 14px", borderRadius: 8, border: "none",
+                          background: "#1f7a1f", color: "#fff", fontSize: 13, fontWeight: 600,
+                          cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+                        + Add Activity
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
-                      <thead>
-                        <tr style={{ background: "#f9fafb" }}>
-                          <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 180 }}>Activity</th>
-                          <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 90 }}>Milestone</th>
-                          {["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].map((m) => (
-                            <th key={m} style={{ padding: "10px 6px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 40 }}>{m}</th>
+
+                  {wpError && <div style={{ background: "#fef2f2", border: "1px solid #fecaca", borderRadius: 8,
+                    padding: "8px 12px", fontSize: 13, color: "#dc2626", marginBottom: 10 }}>{wpError}</div>}
+                  {wpSuccess && <div style={{ background: "#dcfce7", border: "1px solid #bbf7d0", borderRadius: 8,
+                    padding: "8px 12px", fontSize: 13, color: "#15803d", marginBottom: 10 }}>{wpSuccess}</div>}
+
+                  {/* Read-only notice for submitted projects */}
+                  {isCreator && !isDraft && (
+                    <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8,
+                      padding: "10px 14px", fontSize: 13, color: "#1e40af", marginBottom: 12,
+                      display: "flex", alignItems: "center", gap: 8 }}>
+                      🔒 Work plan is locked - project has already been submitted. Activities can only be added while the project is in Draft.
+                    </div>
+                  )}
+
+                  {/* Add activity form */}
+                  {showWpForm && (
+                    <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12,
+                      padding: "16px 18px", marginBottom: 16 }}>
+                      <p style={{ margin: "0 0 12px", fontSize: 13, fontWeight: 700, color: "#374151" }}>New Activity</p>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 10 }}>
+                        <div className="cp-field">
+                          <label className="cp-label">Activity Title *</label>
+                          <input className="cp-input" placeholder="e.g. Literature Review"
+                            value={newActivity.title}
+                            onChange={(e) => setNewActivity((p) => ({ ...p, title: e.target.value }))} />
+                        </div>
+                        <div className="cp-field">
+                          <label className="cp-label">Milestone</label>
+                          <select className="cp-input" value={newActivity.milestone}
+                            onChange={(e) => setNewActivity((p) => ({ ...p, milestone: e.target.value }))}>
+                            <option>Year 1</option><option>Year 2</option><option>Year 3</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="cp-field" style={{ marginBottom: 12 }}>
+                        <label className="cp-label">Description</label>
+                        <input className="cp-input" placeholder="Brief description of this activity"
+                          value={newActivity.description}
+                          onChange={(e) => setNewActivity((p) => ({ ...p, description: e.target.value }))} />
+                      </div>
+                      <div className="cp-field" style={{ marginBottom: 14 }}>
+                        <label className="cp-label">Active Months</label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+                          {WP_MONTHS.map((m, i) => (
+                            <label key={m} style={{ display: "flex", alignItems: "center", gap: 4,
+                              padding: "4px 11px", borderRadius: 20, cursor: "pointer",
+                              border: `1.5px solid ${newActivity[m] ? "#1f7a1f" : "#e5e7eb"}`,
+                              background: newActivity[m] ? "#f0fdf4" : "#fff",
+                              fontSize: 12, fontWeight: newActivity[m] ? 700 : 400,
+                              color: newActivity[m] ? "#15803d" : "#374151", userSelect: "none" }}>
+                              <input type="checkbox" checked={!!newActivity[m]} style={{ display: "none" }}
+                                onChange={() => setNewActivity((p) => ({ ...p, [m]: !p[m] }))} />
+                              {WP_MONTH_LABELS[i]}
+                            </label>
                           ))}
-                          <th style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151" }}>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {workPlanItems.map((item, i) => {
-                          const months = ["jan","feb","mar","apr","may","jun","jul","aug","sep","oct","nov","dec"];
-                          const statusColors = {
-                            Completed: { bg: "#dcfce7", color: "#15803d" },
-                            "In Progress": { bg: "#dbeafe", color: "#1d4ed8" },
-                            Pending: { bg: "#f3f4f6", color: "#6b7280" },
-                          };
-                          const sc = statusColors[item.status] || statusColors.Pending;
-                          return (
-                            <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                              <td style={{ padding: "10px 12px", fontWeight: 600, color: "#111827" }}>
-                                {item.title}
-                                {item.description && (
-                                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280", fontWeight: 400 }}>{item.description}</p>
-                                )}
-                              </td>
-                              <td style={{ padding: "10px 12px", color: "#374151" }}>{item.milestone || "—"}</td>
-                              {months.map((m) => (
-                                <td key={m} style={{ padding: "10px 6px", textAlign: "center" }}>
-                                  {item[m] ? (
-                                    <div style={{
-                                      width: 22, height: 22, borderRadius: 4,
-                                      background: "#1f7a1f", margin: "0 auto",
-                                      display: "flex", alignItems: "center", justifyContent: "center",
-                                    }}>
-                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                    </div>
-                                  ) : (
-                                    <div style={{ width: 22, height: 22, borderRadius: 4, background: "#f3f4f6", margin: "0 auto" }} />
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                        <button type="button" onClick={() => { setShowWpForm(false); setWpError(""); }}
+                          style={{ padding: "7px 14px", borderRadius: 8, border: "1px solid #e5e7eb",
+                            background: "#fff", fontSize: 13, cursor: "pointer", color: "#374151" }}>
+                          Cancel
+                        </button>
+                        <button type="button" onClick={handleAddActivity} disabled={savingWp}
+                          style={{ padding: "7px 16px", borderRadius: 8, border: "none",
+                            background: "#1f7a1f", color: "#fff", fontSize: 13, fontWeight: 600,
+                            cursor: savingWp ? "not-allowed" : "pointer" }}>
+                          {savingWp ? "Saving..." : "Add Activity"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {workPlanItems.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px 0", color: "#9ca3af",
+                      border: "1px dashed #e5e7eb", borderRadius: 10 }}>
+                      <ClipboardList size={36} style={{ marginBottom: 10 }} />
+                      <p style={{ margin: 0, fontSize: 14 }}>No work plan activities yet.</p>
+                      {canEdit && <p style={{ margin: "4px 0 0", fontSize: 12 }}>Click <strong>+ Add Activity</strong> to build your Gantt chart.</p>}
+                    </div>
+                  ) : (
+                    <div style={{ overflowX: "auto" }}>
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
+                        <thead>
+                          <tr style={{ background: "#f9fafb" }}>
+                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 180 }}>Activity</th>
+                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 90 }}>Milestone</th>
+                            {WP_MONTH_LABELS.map((m) => (
+                              <th key={m} style={{ padding: "10px 6px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 40 }}>{m}</th>
+                            ))}
+                            <th style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151" }}>Status</th>
+                            {isCreator && <th style={{ padding: "10px 8px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151" }}>Del</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {workPlanItems.map((item, i) => {
+                            const statusColors = {
+                              Completed: { bg: "#dcfce7", color: "#15803d" },
+                              "In Progress": { bg: "#dbeafe", color: "#1d4ed8" },
+                              Pending: { bg: "#f3f4f6", color: "#6b7280" },
+                            };
+                            const sc = statusColors[item.status] || statusColors.Pending;
+                            return (
+                              <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+                                <td style={{ padding: "10px 12px", fontWeight: 600, color: "#111827" }}>
+                                  {item.title}
+                                  {item.description && (
+                                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280", fontWeight: 400 }}>{item.description}</p>
                                   )}
                                 </td>
-                              ))}
-                              <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                                <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color }}>
-                                  {item.status || "Pending"}
-                                </span>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
+                                <td style={{ padding: "10px 12px", color: "#374151" }}>{item.milestone || "—"}</td>
+                                {WP_MONTHS.map((m) => (
+                                  <td key={m} style={{ padding: "10px 6px", textAlign: "center" }}>
+                                    {item[m] ? (
+                                      <div style={{ width: 22, height: 22, borderRadius: 4, background: "#1f7a1f",
+                                        margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                      </div>
+                                    ) : (
+                                      <div style={{ width: 22, height: 22, borderRadius: 4, background: "#f3f4f6", margin: "0 auto" }} />
+                                    )}
+                                  </td>
+                                ))}
+                                <td style={{ padding: "10px 12px", textAlign: "center" }}>
+                                  <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color }}>
+                                    {item.status || "Pending"}
+                                  </span>
+                                </td>
+                                {canEdit && (
+                                  <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                                    <button type="button" onClick={() => handleDeleteActivity(item.id)}
+                                      style={{ background: "none", border: "none", cursor: "pointer",
+                                        color: "#dc2626", padding: 4, borderRadius: 4 }}
+                                      onMouseEnter={(e) => e.currentTarget.style.background = "#fef2f2"}
+                                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}>
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {activeTab === "Schedule" && (
               <div className="cp-section">

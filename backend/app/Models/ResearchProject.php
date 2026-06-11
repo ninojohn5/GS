@@ -139,16 +139,6 @@ class ResearchProject extends Model
                 $project->reference_no = $referenceNo;
             }
         });
-
-        static::updated(function (ResearchProject $project) {
-            if ($project->wasChanged('status')) {
-                ProposalStatusHistory::create([
-                    'research_project_id' => $project->id,
-                    'changed_by'          => auth()->id(),
-                    'status'              => $project->status,
-                ]);
-            }
-        });
     }
 
     /*

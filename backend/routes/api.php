@@ -91,6 +91,7 @@ Route::get('/personnel/search', function (Request $request) {
         Route::get('/proposals',            [AdminController::class, 'proposals']);
         Route::get('/evaluators',           [AdminController::class, 'evaluators']);
         Route::post('/schedule',            [AdminController::class, 'schedule']);
+        Route::get('/reports',              [AdminController::class, 'reports']);
 
         Route::get('/users',                [AdminController::class, 'users']);
         Route::put('/users/{id}/toggle',    [AdminController::class, 'toggleUser']);

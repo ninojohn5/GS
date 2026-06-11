@@ -7,6 +7,7 @@ backend/storage/app/public/
 backend/storage/logs/
 backend/bootstrap/cache/
 backend/.phpunit.result.cache
+database/database.sqlite
 
 # Frontend
 frontend/node_modules/
