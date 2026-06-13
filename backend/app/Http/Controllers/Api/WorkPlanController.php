@@ -23,6 +23,12 @@ class WorkPlanController extends Controller
         $project = ResearchProject::where('created_by', $request->user()->id)
             ->findOrFail($projectId);
 
+        if (!in_array($project->status, ['Draft', 'Submitted'])) {
+            return response()->json([
+                'message' => 'Work plan can only be edited while the project is in Draft or Submitted status.',
+            ], 403);
+        }
+
         $data = $request->validate([
             'title'        => 'required|string|max:255',
             'description'  => 'nullable|string',
@@ -52,6 +58,12 @@ class WorkPlanController extends Controller
         $project = ResearchProject::where('created_by', $request->user()->id)
             ->findOrFail($projectId);
 
+        if (!in_array($project->status, ['Draft', 'Submitted'])) {
+            return response()->json([
+                'message' => 'Work plan can only be edited while the project is in Draft or Submitted status.',
+            ], 403);
+        }
+
         $activity = WorkPlan::where('research_project_id', $projectId)->findOrFail($id);
 
         $data = $request->validate([
@@ -78,6 +90,12 @@ class WorkPlanController extends Controller
     {
         $project = ResearchProject::where('created_by', $request->user()->id)
             ->findOrFail($projectId);
+
+        if (!in_array($project->status, ['Draft', 'Submitted'])) {
+            return response()->json([
+                'message' => 'Work plan can only be edited while the project is in Draft or Submitted status.',
+            ], 403);
+        }
 
         $activity = WorkPlan::where('research_project_id', $projectId)->findOrFail($id);
         $activity->delete();

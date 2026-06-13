@@ -12,7 +12,22 @@ import Navbar from "../../components/researcher/Navbar";
 import Topbar from "../../components/Topbar";
 import "../../styles/researcher.css";
 import api from "../../utils/api";
+import csuLogoUrl from "../../assets/logo.png";
 
+// Convert logo to base64 so it works inside window.open()
+const getLogoBase64 = () => new Promise((resolve) => {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    resolve(canvas.toDataURL("image/png"));
+  };
+  img.onerror = () => resolve("");
+  img.src = csuLogoUrl;
+});
 const STATUS_BADGE_STYLES = {
   Approved: { bg: "#dcfce7", color: "#15803d" },
   "Under Evaluation": { bg: "#ede9fe", color: "#6d28d9" },
@@ -101,7 +116,7 @@ function TimelineIcon({ status, color }) {
   );
 }
 
-function handlePrintApproved(project, history, approvals, proposal, outputs = []) {
+function handlePrintApproved(project, history, approvals, proposal, outputs = [], logoBase64 = "") {
   const today = new Date().toLocaleDateString("en-PH", {
     year: "numeric",
     month: "long",
@@ -176,7 +191,7 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
                 <td class="center">
                   ${
                     sig
-                      ? `<img src="${sig}" class="proponent-sig" />`
+                      ? `<img src="${sig}" class="sig-img-md" />`
                       : `<span class="muted italic">No signature</span>`
                   }
                 </td>
@@ -209,13 +224,13 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
                 <td class="center">${fmtScore(e.potential_benefits_score)} / 10</td>
                 <td class="center strong">${fmtScore(e.total_score)} / 100</td>
                 <td class="center">
-                  <span class="eval-pill">${e.overall_remarks || "—"}</span>
+                  <span class="pill pill-purple">${e.overall_remarks || "—"}</span>
                 </td>
                 <td>${e.comments || "—"}</td>
                 <td class="center">
                   ${
                     e.signature_image
-                      ? `<img src="${e.signature_image}" class="evaluator-sig" />`
+                      ? `<img src="${e.signature_image}" class="sig-img-md" />`
                       : `<span class="muted italic">No signature</span>`
                   }
                   <div class="small-muted">${e.evaluated_at ? fmtDate(e.evaluated_at) : "—"}</div>
@@ -236,7 +251,7 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
                 <td class="strong">${o.output_type || "—"}</td>
                 <td>${o.description || "—"}</td>
                 <td class="center">
-                  <span class="status-pill">${o.status || "Pending"}</span>
+                  <span class="pill pill-green">${o.status || "Pending"}</span>
                 </td>
                 <td class="center">${o.target_date ? fmtDate(o.target_date) : "—"}</td>
                 <td>${o.file_name || "No uploaded file"}</td>
@@ -261,11 +276,11 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
         <tr>
           <td class="strong">${step.role}</td>
           <td class="center">
-            <span class="status-pill">${step.action}</span>
+            <span class="pill pill-green">${step.action}</span>
           </td>
           <td>${match ? `${match.date} ${match.time}` : "—"}</td>
           <td>
-            ${sig ? `<img src="${sig}" class="approval-sig" />` : ""}
+            ${sig ? `<img src="${sig}" class="sig-img-sm" />` : ""}
             <div class="approved-name">${match ? match.action_by : "—"}</div>
             ${
               match?.remarks
@@ -296,314 +311,289 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
     <html>
     <head>
       <meta charset="UTF-8" />
-      <title>Approved Proposal - ${project.reference_no || ""}</title>
-
+      <title>Research Proposal - ${project.reference_no || ""}</title>
       <style>
-        * {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-          font-family: Georgia, serif;
-          font-size: 9.2pt;
-          color: #111827;
-          background: #fff;
-          padding: 18px 24px;
-        }
-
-        .header {
-          text-align: center;
-          margin-bottom: 13px;
-          padding-bottom: 11px;
-          border-bottom: 2px solid #1f7a1f;
-        }
-
-        .header .label {
-          font-size: 7.5pt;
-          color: #64748b;
-          letter-spacing: 0.1em;
-          text-transform: uppercase;
           font-family: Arial, sans-serif;
+          font-size: 9pt;
+          color: #1a1a1a;
+          background: #fff;
+          padding: 20px 28px;
+        }
+
+        /* ── Header ── */
+        .doc-header {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding-bottom: 12px;
+          border-bottom: 2.5px solid #1a472a;
+          margin-bottom: 14px;
+        }
+
+        .doc-header img {
+          width: 58px;
+          height: 58px;
+          object-fit: contain;
+          flex-shrink: 0;
+        }
+
+        .doc-header-text { flex: 1; }
+
+        .doc-header-university {
+          font-size: 8pt;
+          font-weight: 700;
+          color: #1a472a;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          margin-bottom: 2px;
+        }
+
+        .doc-header-system {
+          font-size: 7.5pt;
+          color: #555;
           margin-bottom: 4px;
         }
 
-        .header h1 {
-          font-size: 14.5pt;
+        .doc-header-title {
+          font-size: 13pt;
           font-weight: 700;
-          color: #111827;
-          line-height: 1.2;
-          margin-bottom: 6px;
+          color: #111;
+          line-height: 1.25;
         }
 
-        .badge {
+        .doc-header-right {
+          text-align: right;
+          flex-shrink: 0;
+        }
+
+        .doc-header-ref {
+          font-size: 7.5pt;
+          color: #555;
+          margin-bottom: 3px;
+        }
+
+        .doc-header-badge {
           display: inline-block;
-          padding: 2px 10px;
-          border-radius: 999px;
-          background: #dcfce7;
-          color: #15803d;
-          border: 1px solid #bbf7d0;
+          padding: 3px 12px;
+          border-radius: 3px;
+          background: #1a472a;
+          color: #fff;
           font-size: 8pt;
           font-weight: 700;
-          font-family: Arial, sans-serif;
-          white-space: nowrap;
+          letter-spacing: 0.04em;
         }
 
+        /* ── Section ── */
         .section {
-          margin-bottom: 11px;
+          margin-bottom: 14px;
           break-inside: avoid;
           page-break-inside: avoid;
         }
 
         .section-title {
-          border-bottom: 2px solid #1f7a1f;
-          padding-bottom: 4px;
-          margin-bottom: 7px;
-          font-family: Arial, sans-serif;
-          font-size: 8.3pt;
+          font-size: 8pt;
           font-weight: 700;
-          color: #1f7a1f;
+          color: #fff;
+          background: #1a472a;
+          padding: 4px 10px;
+          margin-bottom: 8px;
+          letter-spacing: 0.04em;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
         }
 
+        /* ── Info grid ── */
         .info-grid {
           display: grid;
-          grid-template-columns: 160px 1fr;
-          gap: 4px 10px;
-          font-size: 9.2pt;
+          grid-template-columns: 170px 1fr;
+          gap: 3px 12px;
+          font-size: 9pt;
+          padding: 0 4px;
         }
 
-        .info-grid .label {
-          color: #64748b;
-          font-weight: 500;
-        }
+        .info-label { color: #555; }
+        .info-value { font-weight: 700; color: #111; }
 
-        .info-grid .value {
-          color: #111827;
-          font-weight: 700;
-        }
-
+        /* ── Tables ── */
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 7.8pt;
-          font-family: Arial, sans-serif;
+          font-size: 8pt;
         }
 
-        thead {
-          display: table-header-group;
-        }
-
-        tr {
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
+        thead { display: table-header-group; }
+        tr { break-inside: avoid; page-break-inside: avoid; }
 
         th {
-          background: #f8fafc;
+          background: #f0f4f0;
           text-align: left;
-          padding: 5px 6px;
-          color: #334155;
+          padding: 5px 7px;
+          color: #1a472a;
           font-weight: 700;
-          font-size: 7.6pt;
-          border-bottom: 1.5px solid #d1d5db;
+          font-size: 7.8pt;
+          border: 1px solid #c8d8c8;
         }
 
         td {
-          padding: 5px 6px;
-          border-bottom: 1px solid #edf2f7;
+          padding: 5px 7px;
+          border: 1px solid #e0e8e0;
           vertical-align: middle;
+          color: #1a1a1a;
         }
 
-        .approval-table td {
-          padding-top: 5px;
-          padding-bottom: 5px;
+        td.center, th.center { text-align: center; }
+        td.strong { font-weight: 700; }
+        td.muted { color: #888; }
+        td.italic { font-style: italic; }
+
+        .small-muted {
+          font-size: 7.2pt;
+          color: #888;
+          margin-top: 2px;
         }
 
-        .status-pill {
+        /* ── Pills ── */
+        .pill {
           display: inline-block;
           padding: 2px 9px;
-          border-radius: 999px;
-          background: #dcfce7;
-          color: #15803d;
-          font-size: 8pt;
+          border-radius: 2px;
+          font-size: 7.5pt;
           font-weight: 700;
           white-space: nowrap;
         }
 
-        .eval-pill {
-          display: inline-block;
-          padding: 2px 8px;
-          border-radius: 999px;
-          background: #ede9fe;
-          color: #6d28d9;
-          font-size: 7.4pt;
-          font-weight: 700;
-          white-space: nowrap;
-        }
+        .pill-green  { background: #dcfce7; color: #14532d; border: 1px solid #86efac; }
+        .pill-purple { background: #ede9fe; color: #4c1d95; border: 1px solid #c4b5fd; }
+        .pill-blue   { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+        .pill-yellow { background: #fef9c3; color: #713f12; border: 1px solid #fde047; }
+        .pill-gray   { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
 
-        .approval-sig {
+        /* ── Signatures ── */
+        .sig-img-sm {
           max-height: 28px;
-          max-width: 105px;
-          object-fit: contain;
-          display: block;
-          margin-bottom: 1px;
-        }
-
-        .proponent-sig {
-          max-height: 30px;
           max-width: 100px;
           object-fit: contain;
           display: block;
-          margin: 0 auto;
+          margin-bottom: 2px;
         }
 
-        .evaluator-sig {
-          max-height: 30px;
-          max-width: 95px;
+        .sig-img-md {
+          max-height: 34px;
+          max-width: 120px;
           object-fit: contain;
           display: block;
           margin: 0 auto 2px;
         }
 
+        .sig-line {
+          border-bottom: 1px solid #374151;
+          min-height: 32px;
+          width: 80%;
+          margin: 0 auto;
+        }
+
         .approved-name {
           font-size: 8pt;
-          font-weight: 600;
-          color: #111827;
-          line-height: 1.2;
+          font-weight: 700;
+          color: #111;
+          line-height: 1.3;
         }
 
         .approval-remarks {
-          font-size: 7.4pt;
-          color: #64748b;
-          font-style: italic;
-          margin-top: 1px;
-          line-height: 1.2;
-        }
-
-        .center {
-          text-align: center;
-        }
-
-        .strong {
-          font-weight: 700;
-        }
-
-        .muted {
-          color: #94a3b8;
-        }
-
-        .small-muted {
-          color: #94a3b8;
           font-size: 7.2pt;
-          margin-top: 1px;
-        }
-
-        .italic {
+          color: #666;
           font-style: italic;
+          margin-top: 2px;
         }
 
-        .sig-grid {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 28px;
-          margin-top: 24px;
-          break-inside: avoid;
-          page-break-inside: avoid;
+        /* ── Official signatures block ── */
+        .sig-block-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 8px;
+          font-size: 8.5pt;
         }
 
-        .sig-block {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
+        .sig-block-table td {
+          border: 1px solid #c8d8c8;
+          padding: 10px 12px;
+          vertical-align: top;
         }
 
-        .sig-img {
-          max-height: 42px;
-          max-width: 165px;
-          object-fit: contain;
-          margin-bottom: 4px;
-        }
-
-        .sig-line {
-          border-bottom: 1.4px solid #374151;
-          width: 75%;
-          margin-bottom: 6px;
-          min-height: 38px;
-        }
-
-        .sig-name {
+        .sig-role-title {
           font-weight: 700;
-          font-size: 8pt;
-          font-family: Arial, sans-serif;
-          text-align: center;
+          color: #1a472a;
+          margin-bottom: 2px;
         }
 
-        .footer {
-          margin-top: 22px;
-          padding-top: 9px;
-          border-top: 1px solid #e5e7eb;
-          text-align: center;
+        .sig-role-sub {
           font-size: 7.5pt;
-          color: #94a3b8;
-          font-family: Arial, sans-serif;
+          color: #555;
+          margin-bottom: 6px;
+        }
+
+        /* ── Footer ── */
+        .doc-footer {
+          margin-top: 18px;
+          padding-top: 8px;
+          border-top: 1.5px solid #1a472a;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 7pt;
+          color: #888;
         }
 
         @media print {
-          body {
-            padding: 12px 18px;
-          }
-
-          @page {
-            size: A4;
-            margin: 0.38in;
-          }
+          body { padding: 10px 16px; }
+          @page { size: A4; margin: 0.35in; }
         }
       </style>
     </head>
-
     <body>
-      <div class="header">
-        <p class="label">Caraga State University Research Project Proposal Management System</p>
-        <h1>${project.title || "Untitled Proposal"}</h1>
-        <span class="badge">Approved</span>
-      </div>
 
-      <div class="section">
-        <div class="section-title">I. Project Information</div>
-
-        <div class="info-grid">
-          <span class="label">Reference No.</span>
-          <span class="value">${project.reference_no || "—"}</span>
-
-          <span class="label">Type of Scholarly Work</span>
-          <span class="value">${project.type || project.scholarly_work_type || "Research"}</span>
-
-          <span class="label">Total Proposed Budget</span>
-          <span class="value">${project.budget || project.total_budget || "—"}</span>
-
-          <span class="label">Funding Type</span>
-          <span class="value">${project.funding_type === "external" ? `Externally Funded (${project.funding_agency || "—"})` : "Locally Funded"}</span>
-
-          <span class="label">Proposed Start Date</span>
-          <span class="value">${fmtDate(project.start_date)}</span>
-
-          <span class="label">Proposed Completion Date</span>
-          <span class="value">${fmtDate(project.end_date)}</span>
-
-          <span class="label">Evaluation Score</span>
-          <span class="value">${evalScore !== null && evalScore !== undefined ? `${fmtScore(evalScore)} / 100` : "—"}</span>
-
-          <span class="label">Date Submitted</span>
-          <span class="value">${proposal?.submitted_at ? fmtDate(proposal.submitted_at) : "—"}</span>
+      <!-- Header -->
+      <div class="doc-header">
+        <img src="${logoBase64}" alt="CSU Logo" />
+        <div class="doc-header-text">
+          <div class="doc-header-university">Caraga State University</div>
+          <div class="doc-header-system">Research Project Proposal Management System</div>
+          <div class="doc-header-title">${project.title || "Untitled Proposal"}</div>
+        </div>
+        <div class="doc-header-right">
+          <div class="doc-header-ref">${project.reference_no || "—"}</div>
+          <span class="doc-header-badge">APPROVED</span>
         </div>
       </div>
 
+      <!-- I. Project Information -->
+      <div class="section">
+        <div class="section-title">I. Project Information</div>
+        <div class="info-grid">
+          <span class="info-label">Reference No.</span>
+          <span class="info-value">${project.reference_no || "—"}</span>
+          <span class="info-label">Type of Scholarly Work</span>
+          <span class="info-value">${project.type || project.scholarly_work_type || "Research"}</span>
+          <span class="info-label">Total Proposed Budget</span>
+          <span class="info-value">${project.budget || project.total_budget || "—"}</span>
+          <span class="info-label">Funding Type</span>
+          <span class="info-value">${project.funding_type === "external" ? `Externally Funded (${project.funding_agency || "—"})` : "Locally Funded"}</span>
+          <span class="info-label">Proposed Start Date</span>
+          <span class="info-value">${fmtDate(project.start_date)}</span>
+          <span class="info-label">Proposed Completion Date</span>
+          <span class="info-value">${fmtDate(project.end_date)}</span>
+          <span class="info-label">Evaluation Score</span>
+          <span class="info-value">${evalScore !== null && evalScore !== undefined ? `${fmtScore(evalScore)} / 100` : "—"}</span>
+          <span class="info-label">Date Submitted</span>
+          <span class="info-value">${proposal?.submitted_at ? fmtDate(proposal.submitted_at) : "—"}</span>
+        </div>
+      </div>
+
+      <!-- II. Proponents -->
       <div class="section">
         <div class="section-title">II. Proponents</div>
-
         <table>
           <thead>
             <tr>
@@ -613,14 +603,13 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
               <th class="center">Signature</th>
             </tr>
           </thead>
-
           <tbody>${proponentRows}</tbody>
         </table>
       </div>
 
+      <!-- III. Evaluation Summary -->
       <div class="section">
         <div class="section-title">III. Evaluation Summary</div>
-
         <table>
           <thead>
             <tr>
@@ -635,15 +624,14 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
               <th class="center">Signature</th>
             </tr>
           </thead>
-
           <tbody>${evaluationRows}</tbody>
         </table>
       </div>
 
+      <!-- IV. Approval Chain -->
       <div class="section">
         <div class="section-title">IV. Approval Chain</div>
-
-        <table class="approval-table">
+        <table>
           <thead>
             <tr>
               <th>Approver Role</th>
@@ -652,14 +640,13 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
               <th>Approved By / Signature</th>
             </tr>
           </thead>
-
           <tbody>${approvalRows}</tbody>
         </table>
       </div>
 
+      <!-- V. Status History -->
       <div class="section">
         <div class="section-title">V. Status History</div>
-
         <table>
           <thead>
             <tr>
@@ -669,27 +656,22 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
               <th>Remarks</th>
             </tr>
           </thead>
-
           <tbody>
-            ${history
-              .map(
-                (item) => `
-                  <tr>
-                    <td>${item.status}</td>
-                    <td>${item.date} ${item.time}</td>
-                    <td>${item.action_by}</td>
-                    <td>${item.remarks || "—"}</td>
-                  </tr>
-                `
-              )
-              .join("")}
+            ${history.map((item) => `
+              <tr>
+                <td>${item.status}</td>
+                <td>${item.date} ${item.time}</td>
+                <td>${item.action_by}</td>
+                <td>${item.remarks || "—"}</td>
+              </tr>
+            `).join("")}
           </tbody>
         </table>
       </div>
 
+      <!-- VI. Research Outputs -->
       <div class="section">
         <div class="section-title">VI. Research Outputs</div>
-
         <table>
           <thead>
             <tr>
@@ -701,98 +683,57 @@ function handlePrintApproved(project, history, approvals, proposal, outputs = []
               <th>Uploaded File</th>
             </tr>
           </thead>
-
           <tbody>${outputRows}</tbody>
         </table>
-
-        <p class="small-muted" style="margin-top:8px;">
-          Note: Uploaded files are stored separately in the system. This report only lists the attached output file names.
-        </p>
       </div>
 
+      <!-- VII. Official Signatures -->
       <div class="section">
-        <div class="section-title">VII. Uploaded Documents</div>
-        ${(() => {
-          const BASE = (import.meta.env.VITE_STORAGE_URL || "http://127.0.0.1:8000/storage") + "/";
-
-          const safeParseCvs = (raw) => {
-            if (!raw) return [];
-            try {
-              let p = raw;
-              while (typeof p === "string") p = JSON.parse(p);
-              return Array.isArray(p) ? p : p ? [p] : [];
-            } catch { return raw ? [raw] : []; }
-          };
-
-          const docs = [
-            { label: "Proposal Form", path: project.proposal_form_path || project.proposal_form },
-            { label: "Work Plan",     path: project.work_plan_path || project.work_plan_file },
-            { label: "Framework",     path: project.framework_path || project.framework_file },
-            { label: "References",    path: project.references_path || project.references_file },
-            ...safeParseCvs(project.cv_paths || project.cv_files).map((p, i) => ({ label: "CV (" + (i+1) + ")", path: p })),
-          ];
-
-          return docs.map((doc) => {
-            if (!doc.path) {
-              return '<div style="margin-bottom:14px;"><p style="font-weight:700;font-size:8.5pt;color:#374151;margin:0 0 4px;">' + doc.label + '</p><p style="font-size:8pt;color:#94a3b8;font-style:italic;margin:0;">Not uploaded</p></div>';
-            }
-            const url = BASE + doc.path;
-            const fileName = String(doc.path).split("/").pop();
-            const isImage = /\.(png|jpg|jpeg|gif|webp)$/i.test(doc.path);
-            // Default to iframe for non-images (handles PDFs without extensions)
-            let preview = '';
-            if (isImage) {
-              preview = '<img src="' + url + '" style="max-width:100%;max-height:300px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;" />';
-            } else {
-              preview = '<iframe src="' + url + '" style="width:100%;height:420px;border:1px solid #e5e7eb;border-radius:4px;" title="' + doc.label + '"></iframe>';
-            }
-            return '<div style="margin-bottom:18px;break-inside:avoid;page-break-inside:avoid;"><p style="font-weight:700;font-size:8.5pt;color:#1f7a1f;margin:0 0 5px;border-bottom:1px solid #e5e7eb;padding-bottom:3px;">' + doc.label + ' — ' + fileName + '</p>' + preview + '</div>';
-          }).join("");
-        })()}
-      </div>
-
-      <div style="margin-top:28px; border-top:2px solid #1f7a1f; padding-top:16px;">
-        <p style="font-family:Arial,sans-serif; font-size:8pt; font-weight:700; color:#1f7a1f; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:16px;">
-          Official Signatures — F-RPP-001
-        </p>
-        <table style="width:100%; border-collapse:collapse; font-family:Arial,sans-serif; font-size:8pt;">
-          <thead>
-            <tr style="background:#f8fafc;">
-              <th style="padding:6px 8px; border-bottom:1.5px solid #d1d5db; text-align:left; color:#334155;">Role</th>
-              <th style="padding:6px 8px; border-bottom:1.5px solid #d1d5db; text-align:center; color:#334155;">Signature</th>
-              <th style="padding:6px 8px; border-bottom:1.5px solid #d1d5db; text-align:left; color:#334155;">Name &amp; Date</th>
-            </tr>
-          </thead>
+        <div class="section-title">VII. Official Signatures &mdash; F-RPP-001</div>
+        <table class="sig-block-table">
           <tbody>
             <tr>
-              <td style="padding:10px 8px; font-weight:700; border-bottom:1px solid #edf2f7;">Recommending Approval:<br/><span style="font-weight:400; color:#64748b;">Vice President for Research, Innovation &amp; Extension</span></td>
-              <td style="padding:10px 8px; text-align:center; border-bottom:1px solid #edf2f7; min-width:120px;">
-                ${getSig("Recommended") ? `<img src="${getSig("Recommended")}" style="max-height:32px; max-width:110px; object-fit:contain; display:block; margin:0 auto;" />` : `<div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div>`}
+              <td style="width:35%">
+                <div class="sig-role-title">Recommending Approval</div>
+                <div class="sig-role-sub">Vice President for Research, Innovation &amp; Extension</div>
+                ${getSig("Recommended")
+                  ? `<img src="${getSig("Recommended")}" class="sig-img-md" />`
+                  : `<div class="sig-line"></div>`}
+                <div style="margin-top:5px; font-weight:700; font-size:8.5pt;">
+                  ${[...history].reverse().find(h => h.status === "Recommended")?.action_by || ""}
+                </div>
+                <div style="font-size:7.5pt; color:#555;">
+                  Date: ${[...history].reverse().find(h => h.status === "Recommended")?.date || "___________"}
+                </div>
               </td>
-              <td style="padding:10px 8px; border-bottom:1px solid #edf2f7;">
-                <div style="font-weight:600;">${[...history].reverse().find(h => h.status === "Recommended")?.action_by || "___________________________"}</div>
-                <div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ${[...history].reverse().find(h => h.status === "Recommended")?.date || "___________"}</div>
+              <td style="width:35%">
+                <div class="sig-role-title">Approved By</div>
+                <div class="sig-role-sub">SUC President</div>
+                ${getSig("Approved")
+                  ? `<img src="${getSig("Approved")}" class="sig-img-md" />`
+                  : `<div class="sig-line"></div>`}
+                <div style="margin-top:5px; font-weight:700; font-size:8.5pt;">
+                  ${[...history].reverse().find(h => h.status === "Approved")?.action_by || ""}
+                </div>
+                <div style="font-size:7.5pt; color:#555;">
+                  Date: ${[...history].reverse().find(h => h.status === "Approved")?.date || "___________"}
+                </div>
               </td>
-            </tr>
-            <tr>
-              <td style="padding:10px 8px; font-weight:700;">Approved by:<br/><span style="font-weight:400; color:#64748b;">SUC President</span></td>
-              <td style="padding:10px 8px; text-align:center; min-width:120px;">
-                ${getSig("Approved") ? `<img src="${getSig("Approved")}" style="max-height:32px; max-width:110px; object-fit:contain; display:block; margin:0 auto;" />` : `<div style="border-bottom:1px solid #374151; min-height:36px; width:80%; margin:0 auto;"></div>`}
-              </td>
-              <td style="padding:10px 8px;">
-                <div style="font-weight:600;">${[...history].reverse().find(h => h.status === "Approved")?.action_by || "___________________________"}</div>
-                <div style="font-size:7pt; color:#64748b; margin-top:2px;">Date: ${[...history].reverse().find(h => h.status === "Approved")?.date || "___________"}</div>
+              <td style="width:30%; vertical-align:middle; text-align:center;">
+                <img src="${logoBase64}" style="width:52px; height:52px; object-fit:contain; opacity:0.15;" />
               </td>
             </tr>
           </tbody>
         </table>
-        <p style="font-size:7pt; color:#94a3b8; margin-top:6px;">F-RPP-001 Rev. 03 10/06/2023</p>
+        <p style="font-size:7pt; color:#888; margin-top:5px;">F-RPP-001 Rev. 03 10/06/2023</p>
       </div>
 
-      <div class="footer">
-        This document was generated by the Research Project Management System<br/>
-        Caraga State University - ${today}
+      <!-- Footer -->
+      <div class="doc-footer">
+        <span>Caraga State University - Research Project Management System</span>
+        <span>Generated: ${today}</span>
       </div>
+
     </body>
     </html>
   `;
@@ -864,11 +805,14 @@ export default function StatusTracking() {
     setGenerating(true);
 
     try {
-      const projectRes = await api.get(`/projects/${selectedId}`);
+      const [projectRes, proposalRes, logoBase64] = await Promise.all([
+        api.get(`/projects/${selectedId}`),
+        api.get(`/proposals/${selectedId}`).catch(() => ({ data: {} })),
+        getLogoBase64(),
+      ]);
+
       const fullData = projectRes.data?.project || projectRes.data || {};
       const approvals = fullData?.approvals || projectRes.data?.approvals || [];
-
-      const proposalRes = await api.get(`/proposals/${selectedId}`);
       const proposal = proposalRes.data?.proposal || proposalRes.data || {};
 
       const printableProject = {
@@ -880,10 +824,10 @@ export default function StatusTracking() {
           null,
       };
 
-      handlePrintApproved(printableProject, history, approvals, proposal, outputs);
+      handlePrintApproved(printableProject, history, approvals, proposal, outputs, logoBase64);
     } catch (e) {
       console.error("Failed to fetch printable data", e);
-      handlePrintApproved(project, history, [], {}, outputs);
+      handlePrintApproved(project, history, [], {}, outputs, "");
     } finally {
       setTimeout(() => setGenerating(false), 1000);
     }

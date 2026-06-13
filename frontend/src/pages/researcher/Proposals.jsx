@@ -27,6 +27,21 @@ import Navbar from "../../components/researcher/Navbar";
 import Topbar from "../../components/Topbar";
 import "../../styles/researcher.css";
 import api from "../../utils/api";
+import csuLogoUrl from "../../assets/logo.png";
+
+const getLogoBase64 = () => new Promise((resolve) => {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = img.width;
+    canvas.height = img.height;
+    canvas.getContext("2d").drawImage(img, 0, 0);
+    resolve(canvas.toDataURL("image/png"));
+  };
+  img.onerror = () => resolve("");
+  img.src = csuLogoUrl;
+});
 
 const TABS = ["Overview", "Work Plan", "Framework", "References", "Review"];
 
@@ -2113,7 +2128,8 @@ function OutputsTab({
   referencesFile,
   existingFiles,
 }) {
-  const handlePrint = () => {
+  const handlePrint = async () => {
+    const csuLogo = await getLogoBase64();
     const fmtDate = (d) =>
       d
         ? new Date(d).toLocaleDateString("en-PH", {
@@ -2244,76 +2260,92 @@ function OutputsTab({
     <title>Research Proposal - ${form.title || "Untitled"}</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:"Times New Roman",Times,serif;font-size:12pt;color:#111827;background:#fff;}
-      @page{size:A4;margin:25mm 20mm;}
-      @media print{.no-print{display:none!important;}table{page-break-inside:avoid;}}
-      .page{max-width:780px;margin:0 auto;padding:40px 48px;}
-      .header{text-align:center;margin-bottom:28px;padding-bottom:20px;border-bottom:3px double #1f3864;}
-      .uni-name{font-size:13pt;font-weight:700;color:#1f3864;letter-spacing:.04em;text-transform:uppercase;}
-      .office{font-size:10pt;color:#6b7280;margin-top:2px;}
-      .doc-title{font-size:17pt;font-weight:700;color:#1f3864;margin:14px 0 6px;line-height:1.3;}
-      .badge{display:inline-block;margin-top:8px;padding:4px 16px;border-radius:20px;background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:11pt;font-weight:600;}
-      .section{margin-bottom:28px;}
-      .section-title{display:flex;align-items:center;gap:8px;font-size:11pt;font-weight:700;color:#1f3864;text-transform:uppercase;letter-spacing:.06em;border-bottom:2px solid #1f3864;padding-bottom:6px;margin-bottom:14px;}
-      .num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#1f3864;color:#fff;font-size:10pt;font-weight:700;flex-shrink:0;}
-      .info-grid{display:grid;grid-template-columns:200px 1fr;gap:6px 12px;}
-      .info-label{font-size:11pt;color:#6b7280;font-weight:500;padding:4px 0;}
-      .info-value{font-size:11pt;color:#111827;font-weight:500;padding:4px 0;border-bottom:1px dotted #e5e7eb;}
-      table{width:100%;border-collapse:collapse;font-size:11pt;}
-      thead tr{background:#f0f4f8;}
-      thead th{padding:10px 12px;text-align:left;font-size:10pt;font-weight:700;color:#1f3864;text-transform:uppercase;letter-spacing:.04em;border-bottom:2px solid #1f3864;}
-      .add-info{background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:14px 18px;}
-      .add-info li{margin-bottom:8px;font-size:11pt;color:#374151;margin-left:18px;}
-      .footer{text-align:center;margin-top:36px;padding-top:14px;border-top:1px solid #e5e7eb;font-size:9pt;color:#9ca3af;}
-      .print-btn{display:block;margin:0 auto 24px;padding:10px 28px;background:#1f3864;color:#fff;border:none;border-radius:8px;font-size:13pt;font-weight:600;cursor:pointer;}
-    </style></head><body><div class="page">
+      body{font-family:Arial,sans-serif;font-size:9pt;color:#1a1a1a;background:#fff;padding:20px 28px;}
+      @page{size:A4;margin:0.35in;}
+      @media print{.no-print{display:none!important;} tr{page-break-inside:avoid;}}
+
+      .doc-header{display:flex;align-items:center;gap:16px;padding-bottom:12px;border-bottom:2.5px solid #1a472a;margin-bottom:14px;}
+      .doc-header img{width:58px;height:58px;object-fit:contain;flex-shrink:0;}
+      .doc-header-text{flex:1;}
+      .doc-header-university{font-size:8pt;font-weight:700;color:#1a472a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px;}
+      .doc-header-office{font-size:7.5pt;color:#555;margin-bottom:4px;}
+      .doc-header-title{font-size:13pt;font-weight:700;color:#111;line-height:1.25;}
+      .doc-header-right{text-align:right;flex-shrink:0;}
+      .doc-header-date{font-size:7.5pt;color:#555;margin-bottom:4px;}
+      .doc-header-badge{display:inline-block;padding:3px 12px;border-radius:3px;background:#1a472a;color:#fff;font-size:8pt;font-weight:700;letter-spacing:0.04em;}
+
+      .section{margin-bottom:14px;break-inside:avoid;page-break-inside:avoid;}
+      .section-title{font-size:8pt;font-weight:700;color:#fff;background:#1a472a;padding:4px 10px;margin-bottom:8px;letter-spacing:0.04em;text-transform:uppercase;}
+
+      .info-grid{display:grid;grid-template-columns:170px 1fr;gap:3px 12px;font-size:9pt;padding:0 4px;}
+      .info-label{color:#555;}
+      .info-value{font-weight:700;color:#111;border-bottom:1px dotted #ddd;padding-bottom:2px;}
+
+      table{width:100%;border-collapse:collapse;font-size:8pt;}
+      thead{display:table-header-group;}
+      tr{break-inside:avoid;page-break-inside:avoid;}
+      th{background:#f0f4f0;text-align:left;padding:5px 7px;color:#1a472a;font-weight:700;font-size:7.8pt;border:1px solid #c8d8c8;}
+      td{padding:5px 7px;border:1px solid #e0e8e0;vertical-align:middle;color:#1a1a1a;}
+      td.center{text-align:center;}
+
+      .doc-footer{margin-top:18px;padding-top:8px;border-top:1.5px solid #1a472a;display:flex;justify-content:space-between;align-items:center;font-size:7pt;color:#888;}
+      .print-btn{display:block;margin:0 auto 18px;padding:8px 24px;background:#1a472a;color:#fff;border:none;border-radius:4px;font-size:11pt;font-weight:600;cursor:pointer;}
+    </style></head><body>
+
     <button class="print-btn no-print" onclick="window.print()">Print / Save as PDF</button>
-    <div class="header">
-      <p class="uni-name">Caraga State University</p>
-      <p class="office">Office of the Vice President for Research, Innovation &amp; Extension</p>
-      <h1 class="doc-title">${form.title || "Untitled Proposal"}</h1>
-      <p style="font-size:10pt;color:#6b7280;">Date Generated: ${today}</p>
-      <span class="badge">${form.scholarly_work_type || "Research"}</span>
+
+    <div class="doc-header">
+      <img src="${csuLogo}" alt="CSU Logo" />
+      <div class="doc-header-text">
+        <div class="doc-header-university">Caraga State University</div>
+        <div class="doc-header-office">Office of the Vice President for Research, Innovation &amp; Extension</div>
+        <div class="doc-header-title">${form.title || "Untitled Proposal"}</div>
+      </div>
+      <div class="doc-header-right">
+        <div class="doc-header-date">Generated: ${today}</div>
+        <span class="doc-header-badge">${form.scholarly_work_type || "Research"}</span>
+      </div>
     </div>
+
     <div class="section">
-      <div class="section-title"><span class="num">I</span> Basic Information</div>
+      <div class="section-title">I. Basic Information</div>
       <div class="info-grid">
         <span class="info-label">Title</span><span class="info-value">${form.title || "—"}</span>
-        <span class="info-label">Type</span><span class="info-value">${form.scholarly_work_type || "—"}</span>
+        <span class="info-label">Type of Scholarly Work</span><span class="info-value">${form.scholarly_work_type || "—"}</span>
         <span class="info-label">Category</span><span class="info-value">${form.category || "—"}</span>
         <span class="info-label">Lead Agency</span><span class="info-value">${form.lead_agency || "—"}</span>
         <span class="info-label">Site / Area</span><span class="info-value">${form.site_area || "—"}</span>
-        <span class="info-label">Total Budget</span><span class="info-value">${form.total_budget || "—"}</span>
-        <span class="info-label">Start Date</span><span class="info-value">${fmtDate(form.start_date)}</span>
-        <span class="info-label">End Date</span><span class="info-value">${fmtDate(form.end_date)}</span>
-        ${
-          form.submitted_elsewhere
-            ? `<span class="info-label">Other Agency</span><span class="info-value">${form.other_agency_name || "—"}</span><span class="info-label">Agency Amount</span><span class="info-value">₱${Number(form.other_agency_amount || 0).toLocaleString()}</span>`
-            : ""
-        }
+        <span class="info-label">Total Proposed Budget</span><span class="info-value">${form.total_budget || "—"}</span>
+        <span class="info-label">Proposed Start Date</span><span class="info-value">${fmtDate(form.start_date)}</span>
+        <span class="info-label">Proposed End Date</span><span class="info-value">${fmtDate(form.end_date)}</span>
+        ${form.submitted_elsewhere ? `<span class="info-label">Other Agency</span><span class="info-value">${form.other_agency_name || "—"}</span><span class="info-label">Agency Amount</span><span class="info-value">₱${Number(form.other_agency_amount || 0).toLocaleString()}</span>` : ""}
       </div>
     </div>
+
     <div class="section">
-      <div class="section-title"><span class="num">II</span> Research Team</div>
-      ${
-        (form.proponents || []).length === 0
-          ? `<p style="color:#9ca3af;font-style:italic;">No proponents added.</p>`
-          : `<table><thead><tr><th>Name</th><th>Department</th><th>Program · Position</th><th>Role</th><th style="text-align:center;">Signature</th></tr></thead><tbody>${proponentRows}</tbody></table>`
-      }
+      <div class="section-title">II. Research Team</div>
+      ${(form.proponents || []).length === 0
+        ? `<p style="color:#9ca3af;font-style:italic;font-size:8.5pt;padding:4px;">No proponents added.</p>`
+        : `<table><thead><tr><th>Name</th><th>Department</th><th>Program / Position</th><th>Role</th><th class="center">Signature</th></tr></thead><tbody>${proponentRows}</tbody></table>`}
     </div>
-    ${
-      additionalInfo.length > 0
-        ? `<div class="section"><div class="section-title"><span class="num">III</span> Additional Information</div><div class="add-info"><ul>${additionalInfo.join("")}</ul></div></div>`
-        : ""
-    }
+
+    ${additionalInfo.length > 0 ? `
     <div class="section">
-      <div class="section-title"><span class="num">${
-        additionalInfo.length > 0 ? "IV" : "III"
-      }</span> Attached Documents</div>
+      <div class="section-title">III. Additional Information</div>
+      <ul style="padding-left:18px;font-size:8.5pt;color:#374151;line-height:1.8;">${additionalInfo.join("")}</ul>
+    </div>` : ""}
+
+    <div class="section">
+      <div class="section-title">${additionalInfo.length > 0 ? "IV" : "III"}. Attached Documents</div>
       <table><thead><tr><th>Document</th><th>Status / File Name</th></tr></thead><tbody>${fileList}</tbody></table>
     </div>
-    <div class="footer">Generated by Research PMS - Caraga State University - ${today}</div>
-    </div></body></html>`;
+
+    <div class="doc-footer">
+      <span>Caraga State University - Research Project Management System</span>
+      <span>Generated: ${today}</span>
+    </div>
+
+    </body></html>`;
 
     const win = window.open("", "_blank");
     win.document.write(html);
@@ -2322,56 +2354,45 @@ function OutputsTab({
   };
 
   const Section = ({ icon: Icon, title, children }) => (
-    <div style={{ marginBottom: 28 }}>
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 12,
-          paddingBottom: 8,
-          borderBottom: "2px solid #1f7a1f",
-        }}
-      >
-        <Icon size={16} color="#1f7a1f" />
-
-        <h3
-          style={{
-            margin: 0,
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#1f7a1f",
-            textTransform: "uppercase",
-            letterSpacing: "0.06em",
-            fontFamily: "sans-serif",
-          }}
-        >
+    <div style={{ marginBottom: 18 }}>
+      <div style={{
+        background: "#1a472a",
+        padding: "5px 12px",
+        marginBottom: 10,
+        display: "flex",
+        alignItems: "center",
+        gap: 8,
+      }}>
+        <Icon size={13} color="#fff" />
+        <h3 style={{
+          margin: 0,
+          fontSize: 11,
+          fontWeight: 700,
+          color: "#fff",
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          fontFamily: "Arial, sans-serif",
+        }}>
           {title}
         </h3>
       </div>
-
       {children}
     </div>
   );
 
   const Row = ({ label, value }) => (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "190px 1fr",
-        gap: 8,
-        marginBottom: 8,
-        fontSize: 13,
-      }}
-    >
-      <span style={{ color: "#6b7280", fontWeight: 500 }}>{label}</span>
-
-      <span style={{ color: "#111827", fontWeight: 500 }}>
-        {value || (
-          <span style={{ color: "#d1d5db", fontStyle: "italic" }}>
-            Not provided
-          </span>
-        )}
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "170px 1fr",
+      gap: 8,
+      marginBottom: 4,
+      fontSize: 12,
+      fontFamily: "Arial, sans-serif",
+      padding: "2px 4px",
+    }}>
+      <span style={{ color: "#555", fontWeight: 400 }}>{label}</span>
+      <span style={{ color: "#111", fontWeight: 700 }}>
+        {value || <span style={{ color: "#bbb", fontStyle: "italic", fontWeight: 400 }}>Not provided</span>}
       </span>
     </div>
   );
@@ -2454,70 +2475,53 @@ function OutputsTab({
         </button>
       </div>
 
-      <div
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 14,
-          padding: "40px 36px",
-          maxWidth: 900,
-          width: "100%",
-          margin: "0 auto",
-          boxShadow: "0 4px 24px rgba(0,0,0,0.07)",
-          fontFamily: "Georgia, serif",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: 32,
-            paddingBottom: 24,
-            borderBottom: "3px double #1f7a1f",
-          }}
-        >
-          <p
-            style={{
-              margin: "0 0 4px",
-              fontSize: 10,
-              color: "#6b7280",
-              letterSpacing: "0.1em",
-              textTransform: "uppercase",
-              fontFamily: "sans-serif",
-            }}
-          >
-            Caraga State University - Research PMS
-          </p>
-
-          <h1
-            style={{
-              margin: "0 0 10px",
-              fontSize: 20,
-              fontWeight: 700,
-              color: "#111827",
-              lineHeight: 1.35,
-            }}
-          >
-            {form.title || (
-              <span style={{ color: "#d1d5db" }}>Untitled Proposal</span>
-            )}
-          </h1>
-
-          <span
-            style={{
-              display: "inline-block",
-              padding: "4px 14px",
-              borderRadius: 20,
-              background: "#f0fdf4",
-              color: "#15803d",
-              border: "1px solid #bbf7d0",
-              fontSize: 12,
-              fontWeight: 600,
-              fontFamily: "sans-serif",
-            }}
-          >
-            {form.scholarly_work_type || "Research"}
-          </span>
+      <div style={{
+        background: "#fff",
+        border: "1px solid #e5e7eb",
+        borderRadius: 10,
+        padding: "28px 32px",
+        maxWidth: 900,
+        width: "100%",
+        margin: "0 auto",
+        boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
+        fontFamily: "Arial, sans-serif",
+        overflow: "hidden",
+      }}>
+        {/* Header — matches approved form */}
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          paddingBottom: 14,
+          borderBottom: "2.5px solid #1a472a",
+          marginBottom: 18,
+        }}>
+          <img src={csuLogoUrl} alt="CSU Logo"
+            style={{ width: 56, height: 56, objectFit: "contain", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <p style={{ margin: "0 0 2px", fontSize: 9, fontWeight: 700, color: "#1a472a",
+              textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Caraga State University
+            </p>
+            <p style={{ margin: "0 0 4px", fontSize: 8, color: "#555" }}>
+              Office of the Vice President for Research, Innovation &amp; Extension
+            </p>
+            <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#111", lineHeight: 1.25 }}>
+              {form.title || <span style={{ color: "#ccc" }}>Untitled Proposal</span>}
+            </p>
+          </div>
+          <div style={{ textAlign: "right", flexShrink: 0 }}>
+            <p style={{ margin: "0 0 4px", fontSize: 9, color: "#555" }}>
+              {new Date().toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+            </p>
+            <span style={{
+              display: "inline-block", padding: "3px 12px", borderRadius: 3,
+              background: "#1a472a", color: "#fff", fontSize: 9, fontWeight: 700,
+              letterSpacing: "0.04em",
+            }}>
+              {form.scholarly_work_type || "Research"}
+            </span>
+          </div>
         </div>
 
         <Section icon={BookOpen} title="I. Basic Information">
@@ -2573,11 +2577,11 @@ function OutputsTab({
                 </colgroup>
 
                 <thead>
-                  <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <tr>
                     {[
                       "Name",
                       "Department",
-                      "Program · Position",
+                      "Program / Position",
                       "Team Role",
                       "Signature",
                     ].map((h, i) => (
@@ -2586,10 +2590,12 @@ function OutputsTab({
                         style={{
                           padding: "6px 8px",
                           textAlign: i === 4 ? "center" : "left",
-                          color: "#6b7280",
-                          fontWeight: 600,
-                          fontFamily: "sans-serif",
+                          color: "#1a472a",
+                          fontWeight: 700,
+                          fontFamily: "Arial, sans-serif",
                           fontSize: 11,
+                          background: "#f0f4f0",
+                          border: "1px solid #c8d8c8",
                         }}
                       >
                         {h}
@@ -2605,116 +2611,39 @@ function OutputsTab({
                     const { Icon } = rs;
 
                     return (
-                      <tr
-                        key={p.id}
-                        style={{ borderBottom: "1px solid #f1f5f9" }}
-                      >
-                        <td
-                          style={{
-                            padding: "12px 8px",
-                            fontWeight: 600,
-                            verticalAlign: "middle",
-                            wordBreak: "break-word",
-                          }}
-                        >
+                      <tr key={p.id}>
+                        <td style={{ padding: "8px", fontWeight: 700, verticalAlign: "middle",
+                          wordBreak: "break-word", border: "1px solid #e0e8e0", fontSize: 12 }}>
                           {p.name}
                         </td>
-
-                        <td
-                          style={{
-                            padding: "12px 8px",
-                            color: "#374151",
-                            verticalAlign: "middle",
-                            fontSize: 12,
-                            fontWeight: 500,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {p.department || (
-                            <span
-                              style={{ color: "#d1d5db", fontStyle: "italic" }}
-                            >
-                              —
-                            </span>
-                          )}
+                        <td style={{ padding: "8px", color: "#374151", verticalAlign: "middle",
+                          fontSize: 12, wordBreak: "break-word", border: "1px solid #e0e8e0" }}>
+                          {p.department || <span style={{ color: "#d1d5db", fontStyle: "italic" }}>—</span>}
                         </td>
-
-                        <td
-                          style={{
-                            padding: "12px 8px",
-                            color: "#6b7280",
-                            verticalAlign: "middle",
-                            fontSize: 12,
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {[p.program, p.position].filter(Boolean).join(" · ") || (
-                            <span
-                              style={{ color: "#d1d5db", fontStyle: "italic" }}
-                            >
-                              —
-                            </span>
-                          )}
+                        <td style={{ padding: "8px", color: "#555", verticalAlign: "middle",
+                          fontSize: 12, wordBreak: "break-word", border: "1px solid #e0e8e0" }}>
+                          {[p.program, p.position].filter(Boolean).join(" / ") ||
+                            <span style={{ color: "#d1d5db", fontStyle: "italic" }}>—</span>}
                         </td>
-
-                        <td
-                          style={{ padding: "12px 8px", verticalAlign: "middle" }}
-                        >
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: 4,
-                              fontSize: 11,
-                              fontWeight: 700,
-                              padding: "2px 9px",
-                              borderRadius: 20,
-                              color: rs.color,
-                              background: rs.bg,
-                              border: `1.5px solid ${rs.border}`,
-                            }}
-                          >
+                        <td style={{ padding: "8px", verticalAlign: "middle", border: "1px solid #e0e8e0" }}>
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 2,
+                            color: rs.color, background: rs.bg, border: `1px solid ${rs.border}`,
+                          }}>
                             <Icon size={10} strokeWidth={2.5} /> {rs.label}
                           </span>
                         </td>
-
-                        <td
-                          style={{
-                            padding: "8px 6px",
-                            textAlign: "center",
-                            verticalAlign: "middle",
-                          }}
-                        >
+                        <td style={{ padding: "8px 6px", textAlign: "center",
+                          verticalAlign: "middle", border: "1px solid #e0e8e0" }}>
                           {signature ? (
-                            <div
-                              style={{
-                                width: "100%",
-                                height: 46,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <img
-                                src={signature}
-                                alt="sig"
-                                style={{
-                                  maxHeight: 38,
-                                  maxWidth: 100,
-                                  objectFit: "contain",
-                                }}
-                              />
+                            <div style={{ width: "100%", height: 46, display: "flex",
+                              alignItems: "center", justifyContent: "center" }}>
+                              <img src={signature} alt="sig"
+                                style={{ maxHeight: 38, maxWidth: 100, objectFit: "contain" }} />
                             </div>
                           ) : (
-                            <span
-                              style={{
-                                color: "#d1d5db",
-                                fontSize: 11,
-                                fontStyle: "italic",
-                              }}
-                            >
-                              —
-                            </span>
+                            <span style={{ color: "#d1d5db", fontSize: 11, fontStyle: "italic" }}>—</span>
                           )}
                         </td>
                       </tr>
@@ -2727,57 +2656,59 @@ function OutputsTab({
         </Section>
 
         <Section icon={FileText} title="III. Attached Documents">
-          {fileRows.map(({ label, file, existing }) => (
-            <div
-              key={label}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "6px 0",
-                borderBottom: "1px solid #f9fafb",
-                fontSize: 13,
-              }}
-            >
-              {file || existing ? (
-                <>
-                  <FileCheck size={14} color="#15803d" />
-                  <span style={{ color: "#111827" }}>
-                    {label}:{" "}
-                    <span style={{ color: "#15803d", fontWeight: 600 }}>
-                      {file?.name || "Uploaded"}
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr>
+                <th style={{ padding: "5px 8px", textAlign: "left", color: "#1a472a",
+                  fontWeight: 700, background: "#f0f4f0", border: "1px solid #c8d8c8", fontSize: 11 }}>
+                  Document
+                </th>
+                <th style={{ padding: "5px 8px", textAlign: "left", color: "#1a472a",
+                  fontWeight: 700, background: "#f0f4f0", border: "1px solid #c8d8c8", fontSize: 11 }}>
+                  Status / File Name
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {fileRows.map(({ label, file, existing }) => (
+                <tr key={label}>
+                  <td style={{ padding: "6px 8px", border: "1px solid #e0e8e0" }}>
+                    <span style={{ color: file || existing ? "#15803d" : "#ccc",
+                      fontWeight: 700, marginRight: 6 }}>
+                      {file || existing ? "✔" : "✗"}
                     </span>
-                  </span>
-                </>
-              ) : (
-                <>
-                  <X size={14} color="#d1d5db" />
-                  <span style={{ color: "#9ca3af", fontStyle: "italic" }}>
-                    {label}: not uploaded
-                  </span>
-                </>
-              )}
-            </div>
-          ))}
+                    <span style={{ color: file || existing ? "#111" : "#9ca3af",
+                      fontStyle: file || existing ? "normal" : "italic" }}>
+                      {label}
+                    </span>
+                  </td>
+                  <td style={{ padding: "6px 8px", border: "1px solid #e0e8e0",
+                    color: file || existing ? "#15803d" : "#9ca3af",
+                    fontWeight: file || existing ? 600 : 400,
+                    fontStyle: file || existing ? "normal" : "italic" }}>
+                    {file?.name || (existing ? "Previously uploaded" : "Not uploaded")}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Section>
 
-        <div
-          style={{
-            marginTop: 40,
-            paddingTop: 16,
-            borderTop: "1px solid #e5e7eb",
-            textAlign: "center",
-            fontSize: 11,
-            color: "#9ca3af",
-            fontFamily: "sans-serif",
-          }}
-        >
-          Generated by Research PMS -{" "}
-          {new Date().toLocaleDateString("en-PH", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
+        <div style={{
+          marginTop: 24,
+          paddingTop: 10,
+          borderTop: "1.5px solid #1a472a",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          fontSize: 9,
+          color: "#888",
+          fontFamily: "Arial, sans-serif",
+        }}>
+          <span>Caraga State University - Research Project Management System</span>
+          <span>Generated: {new Date().toLocaleDateString("en-PH", {
+            year: "numeric", month: "long", day: "numeric",
+          })}</span>
         </div>
       </div>
     </div>

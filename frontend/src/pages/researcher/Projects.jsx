@@ -298,14 +298,14 @@ export default function ResearchProjects() {
                                 padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
                                 background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe",
                                 whiteSpace: "nowrap" }}>
-                                🌐 External
+                                External
                               </span>
                             ) : (
                               <span style={{ display: "inline-flex", alignItems: "center", gap: 4,
                                 padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
                                 background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0",
                                 whiteSpace: "nowrap" }}>
-                                🏛️ Local
+                                Local
                               </span>
                             )}
                           </td>

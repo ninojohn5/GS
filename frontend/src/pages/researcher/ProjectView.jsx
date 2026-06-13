@@ -1382,7 +1382,6 @@ export default function ProjectView() {
                     lineHeight: 1.5,
                   }}
                 >
-                  Note: If a file does not open, run <strong>php artisan storage:link</strong> in your Laravel backend.
                 </p>
               </div>
             )}
@@ -1390,7 +1389,8 @@ export default function ProjectView() {
             {activeTab === "Work Plan" && (() => {
               const isCreator = project && parseInt(project.created_by) === currentUserId;
               const isDraft   = project?.status === "Draft";
-              const canEdit   = isCreator && isDraft;
+              const isEditable = ["Draft", "Submitted"].includes(project?.status);
+              const canEdit   = isCreator && isEditable;
               const handleAddActivity = async () => {
                 if (!newActivity.title.trim()) { setWpError("Activity title is required."); return; }
                 setWpError(""); setSavingWp(true);
@@ -1429,12 +1429,12 @@ export default function ProjectView() {
                   {wpSuccess && <div style={{ background: "#dcfce7", border: "1px solid #bbf7d0", borderRadius: 8,
                     padding: "8px 12px", fontSize: 13, color: "#15803d", marginBottom: 10 }}>{wpSuccess}</div>}
 
-                  {/* Read-only notice for submitted projects */}
-                  {isCreator && !isDraft && (
+                  {/* Read-only notice for locked projects */}
+                  {isCreator && !isEditable && (
                     <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: 8,
                       padding: "10px 14px", fontSize: 13, color: "#1e40af", marginBottom: 12,
                       display: "flex", alignItems: "center", gap: 8 }}>
-                      🔒 Work plan is locked - project has already been submitted. Activities can only be added while the project is in Draft.
+                      🔒 Work plan is locked — the presentation has already been scheduled. No further changes can be made.
                     </div>
                   )}
 
@@ -1506,56 +1506,105 @@ export default function ProjectView() {
                     </div>
                   ) : (
                     <div style={{ overflowX: "auto" }}>
-                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 800 }}>
+                      {/* ── Gantt Bar Chart ── */}
+                      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 820 }}>
                         <thead>
                           <tr style={{ background: "#f9fafb" }}>
-                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 180 }}>Activity</th>
-                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 90 }}>Milestone</th>
-                            {WP_MONTH_LABELS.map((m) => (
-                              <th key={m} style={{ padding: "10px 6px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151", minWidth: 40 }}>{m}</th>
-                            ))}
-                            <th style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151" }}>Status</th>
-                            {isCreator && <th style={{ padding: "10px 8px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb", fontWeight: 700, color: "#374151" }}>Del</th>}
+                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb",
+                              fontWeight: 700, color: "#374151", minWidth: 180, width: 180 }}>Activity</th>
+                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb",
+                              fontWeight: 700, color: "#374151", minWidth: 80, width: 80 }}>Milestone</th>
+                            <th style={{ padding: "10px 12px", textAlign: "left", borderBottom: "1.5px solid #e5e7eb",
+                              fontWeight: 700, color: "#374151", width: "100%" }}>
+                              {/* Month header ruler */}
+                              <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)", gap: 0 }}>
+                                {WP_MONTH_LABELS.map((m) => (
+                                  <div key={m} style={{ textAlign: "center", fontSize: 11, fontWeight: 700,
+                                    color: "#6b7280", padding: "0 2px" }}>{m}</div>
+                                ))}
+                              </div>
+                            </th>
+                            <th style={{ padding: "10px 12px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb",
+                              fontWeight: 700, color: "#374151", minWidth: 90 }}>Status</th>
+                            {canEdit && (
+                              <th style={{ padding: "10px 8px", textAlign: "center", borderBottom: "1.5px solid #e5e7eb",
+                                fontWeight: 700, color: "#374151", width: 40 }}>Del</th>
+                            )}
                           </tr>
                         </thead>
                         <tbody>
                           {workPlanItems.map((item, i) => {
                             const statusColors = {
-                              Completed: { bg: "#dcfce7", color: "#15803d" },
-                              "In Progress": { bg: "#dbeafe", color: "#1d4ed8" },
-                              Pending: { bg: "#f3f4f6", color: "#6b7280" },
+                              Completed:    { bg: "#dcfce7", color: "#15803d", bar: "#15803d" },
+                              "In Progress":{ bg: "#dbeafe", color: "#1d4ed8", bar: "#1d4ed8" },
+                              Pending:      { bg: "#f3f4f6", color: "#6b7280", bar: "#1f7a1f" },
                             };
                             const sc = statusColors[item.status] || statusColors.Pending;
+
+                            // Build segments: consecutive checked months = one bar, gaps = empty space
+                            const segments = WP_MONTHS.map((m) => !!item[m]);
+
                             return (
-                              <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9", background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
-                                <td style={{ padding: "10px 12px", fontWeight: 600, color: "#111827" }}>
+                              <tr key={item.id} style={{ borderBottom: "1px solid #f1f5f9",
+                                background: i % 2 === 0 ? "#fff" : "#fafafa" }}>
+
+                                {/* Activity name */}
+                                <td style={{ padding: "10px 12px", fontWeight: 600, color: "#111827",
+                                  verticalAlign: "middle" }}>
                                   {item.title}
                                   {item.description && (
-                                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280", fontWeight: 400 }}>{item.description}</p>
+                                    <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280",
+                                      fontWeight: 400 }}>{item.description}</p>
                                   )}
                                 </td>
-                                <td style={{ padding: "10px 12px", color: "#374151" }}>{item.milestone || "—"}</td>
-                                {WP_MONTHS.map((m) => (
-                                  <td key={m} style={{ padding: "10px 6px", textAlign: "center" }}>
-                                    {item[m] ? (
-                                      <div style={{ width: 22, height: 22, borderRadius: 4, background: "#1f7a1f",
-                                        margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                          <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                      </div>
-                                    ) : (
-                                      <div style={{ width: 22, height: 22, borderRadius: 4, background: "#f3f4f6", margin: "0 auto" }} />
-                                    )}
-                                  </td>
-                                ))}
-                                <td style={{ padding: "10px 12px", textAlign: "center" }}>
-                                  <span style={{ display: "inline-block", padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color }}>
+
+                                {/* Milestone */}
+                                <td style={{ padding: "10px 12px", color: "#374151",
+                                  verticalAlign: "middle", fontSize: 11 }}>
+                                  {item.milestone || "—"}
+                                </td>
+
+                                {/* Gantt bar column */}
+                                <td style={{ padding: "8px 12px", verticalAlign: "middle" }}>
+                                  <div style={{ display: "grid", gridTemplateColumns: "repeat(12, 1fr)",
+                                    gap: 2, alignItems: "center", height: 28 }}>
+                                    {segments.map((active, idx) => {
+                                      const prevActive = idx > 0 && segments[idx - 1];
+                                      const nextActive = idx < 11 && segments[idx + 1];
+                                      const isFirst = active && !prevActive;
+                                      const isLast  = active && !nextActive;
+                                      const borderRadius = active
+                                        ? `${isFirst ? "6px" : "0"} ${isLast ? "6px" : "0"} ${isLast ? "6px" : "0"} ${isFirst ? "6px" : "0"}`
+                                        : "3px";
+                                      return (
+                                        <div key={idx} style={{
+                                          height: active ? 22 : 6,
+                                          borderRadius,
+                                          background: active ? sc.bar : "#f1f5f9",
+                                          opacity: active ? 1 : 0.6,
+                                          transition: "all 0.15s",
+                                          marginLeft: active && !prevActive ? 0 : active ? -2 : 0,
+                                          marginRight: active && !nextActive ? 0 : active ? -2 : 0,
+                                        }} />
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+
+                                {/* Status */}
+                                <td style={{ padding: "10px 12px", textAlign: "center",
+                                  verticalAlign: "middle" }}>
+                                  <span style={{ display: "inline-block", padding: "3px 10px",
+                                    borderRadius: 20, fontSize: 11, fontWeight: 600,
+                                    background: sc.bg, color: sc.color }}>
                                     {item.status || "Pending"}
                                   </span>
                                 </td>
+
+                                {/* Delete */}
                                 {canEdit && (
-                                  <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                                  <td style={{ padding: "10px 8px", textAlign: "center",
+                                    verticalAlign: "middle" }}>
                                     <button type="button" onClick={() => handleDeleteActivity(item.id)}
                                       style={{ background: "none", border: "none", cursor: "pointer",
                                         color: "#dc2626", padding: 4, borderRadius: 4 }}
